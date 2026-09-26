@@ -7,9 +7,11 @@
 import Phaser from 'phaser';
 
 export function generateAllTextures(scene: Phaser.Scene) {
-  if (scene.textures.exists('tile_floor')) {
-    return; // Already initialized
-  }
+  const addTex = (key: string, canvas: HTMLCanvasElement) => {
+    if (!scene.textures.exists(key)) {
+      scene.textures.addCanvas(key, canvas);
+    }
+  };
 
   // --- Helper to draw a pixel rect ---
   const makeCanvas = (w: number, h: number): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } => {
@@ -139,7 +141,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillRect(2, 150, 8, 8);
     ctx.fillRect(150, 150, 8, 8);
 
-    scene.textures.addCanvas('WiklundPic', canvas);
+    addTex('WiklundPic', canvas);
   }
 
   // 2. ALBUM COVER: NEOWAVE (Chubby Crown King, Purple Storm, Dark Castle)
@@ -248,7 +250,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillRect(2, 150, 8, 8);
     ctx.fillRect(150, 150, 8, 8);
 
-    scene.textures.addCanvas('NeowavePic', canvas);
+    addTex('NeowavePic', canvas);
   }
 
   // 3. MAP TILES & WORLD TEXTURES
@@ -270,7 +272,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.strokeStyle = '#161d19';
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, 64, 64);
-    scene.textures.addCanvas('tile_floor', canvas);
+    addTex('tile_floor', canvas);
   }
 
   {
@@ -287,7 +289,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.strokeRect(0, 0, 64, 64);
     ctx.beginPath();
     ctx.moveTo(0, 32); ctx.lineTo(64, 32); ctx.stroke();
-    scene.textures.addCanvas('wall', canvas);
+    addTex('wall', canvas);
   }
 
   {
@@ -303,7 +305,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.strokeStyle = '#28231c';
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, 64, 64);
-    scene.textures.addCanvas('path_tile', canvas);
+    addTex('path_tile', canvas);
   }
 
   // 4. BUILDINGS: MATCH GATES, HERO ALTAR, MERCHANT SHOP
@@ -329,7 +331,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     // Top Arch
     ctx.fillStyle = '#404c44';
     ctx.fillRect(10, 10, 300, 25);
-    scene.textures.addCanvas('build_gate', canvas);
+    addTex('build_gate', canvas);
   }
 
   {
@@ -359,7 +361,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillRect(76, 112, 8, 8);
     ctx.fillRect(40, 76, 8, 8);
     ctx.fillRect(112, 76, 8, 8);
-    scene.textures.addCanvas('build_altar', canvas);
+    addTex('build_altar', canvas);
   }
 
   {
@@ -380,7 +382,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillStyle = '#ef4444'; ctx.fillRect(40, 80, 10, 12);
     ctx.fillStyle = '#3b82f6'; ctx.fillRect(60, 78, 10, 14);
     ctx.fillStyle = '#10b981'; ctx.fillRect(80, 80, 10, 12);
-    scene.textures.addCanvas('build_shop', canvas);
+    addTex('build_shop', canvas);
   }
 
   // 5. CHARACTERS: ZAZA, MONSTER ZAZA, GRIM, BJORN
@@ -513,7 +515,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillStyle = '#3f2818';
     ctx.fillRect(29, 45, 2.5, 2.5);
 
-    scene.textures.addCanvas('char_zaza', canvas);
+    addTex('char_zaza', canvas);
   }
 
   // 5b. HIGH-DEFINITION PORTRAITS & PREVIEW CARDS FOR ALTAR
@@ -661,7 +663,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.textAlign = 'center';
     ctx.fillText('✦ ЭПИЧЕСКИЙ ✦', 70, 139);
 
-    scene.textures.addCanvas('portrait_zaza', canvas);
+    addTex('portrait_zaza', canvas);
   }
 
   {
@@ -738,7 +740,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.textAlign = 'center';
     ctx.fillText('◆ ОБЫЧНЫЙ ◆', 70, 139);
 
-    scene.textures.addCanvas('portrait_grim', canvas);
+    addTex('portrait_grim', canvas);
   }
 
   {
@@ -812,7 +814,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.textAlign = 'center';
     ctx.fillText('◆ ОБЫЧНЫЙ ◆', 70, 139);
 
-    scene.textures.addCanvas('portrait_bjorn', canvas);
+    addTex('portrait_bjorn', canvas);
   }
 
   {
@@ -888,7 +890,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillRect(24, 63, 8, 10);
     ctx.fillRect(38, 63, 8, 10);
 
-    scene.textures.addCanvas('char_zaza_monster', canvas);
+    addTex('char_zaza_monster', canvas);
   }
 
   {
@@ -909,11 +911,11 @@ export function generateAllTextures(scene: Phaser.Scene) {
     // Flask on belt
     ctx.fillStyle = '#a855f7';
     ctx.fillRect(26, 32, 8, 10);
-    scene.textures.addCanvas('char_grim', canvas);
+    addTex('char_grim', canvas);
   }
 
   {
-    // BJORN (Viking Berserker)
+    // BJORN (Viking Berserker - Unarmed Body with Fur Armor & Horned Helmet)
     const { canvas, ctx } = makeCanvas(48, 56);
     // Steel Horned Helmet
     ctx.fillStyle = '#64748b';
@@ -930,12 +932,11 @@ export function generateAllTextures(scene: Phaser.Scene) {
     // Fur & Armor
     ctx.fillStyle = '#92400e';
     ctx.fillRect(12, 28, 24, 22);
-    // Massive Battleaxe on side
+    // Armored Gauntlets / Gloves
     ctx.fillStyle = '#78350f';
-    ctx.fillRect(38, 10, 4, 40);
-    ctx.fillStyle = '#cbd5e1';
-    ctx.fillRect(32, 8, 16, 14);
-    scene.textures.addCanvas('char_bjorn', canvas);
+    ctx.fillRect(6, 32, 6, 12);
+    ctx.fillRect(36, 32, 6, 12);
+    addTex('char_bjorn', canvas);
   }
 
   // 6. SKILL ICONS (32x32)
@@ -960,7 +961,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     // Bubbles
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(14, 16, 3, 3);
-    scene.textures.addCanvas('skill_zaza_1', canvas);
+    addTex('skill_zaza_1', canvas);
   }
 
   // Zaza Skill 2: Propeller Club
@@ -979,7 +980,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.beginPath();
     ctx.arc(16, 16, 11, 0, Math.PI * 1.4);
     ctx.stroke();
-    scene.textures.addCanvas('skill_zaza_2', canvas);
+    addTex('skill_zaza_2', canvas);
   }
 
   // Zaza Skill 3: Monster Mutation (Ult)
@@ -996,7 +997,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillStyle = '#fef08a';
     ctx.fillRect(6, 4, 4, 6);
     ctx.fillRect(22, 4, 4, 6);
-    scene.textures.addCanvas('skill_zaza_3', canvas);
+    addTex('skill_zaza_3', canvas);
   }
 
   // Monster Skills
@@ -1008,7 +1009,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillRect(8, 8, 5, 8);
     ctx.fillRect(19, 8, 5, 8);
     ctx.fillRect(13, 16, 6, 8);
-    scene.textures.addCanvas('skill_monster_1', canvas);
+    addTex('skill_monster_1', canvas);
   }
 
   {
@@ -1022,7 +1023,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.arc(8, 16, 14, -Math.PI / 3, Math.PI / 3);
     ctx.arc(8, 16, 22, -Math.PI / 3, Math.PI / 3);
     ctx.stroke();
-    scene.textures.addCanvas('skill_monster_2', canvas);
+    addTex('skill_monster_2', canvas);
   }
 
   // Grim Skill 1: Tar Bomb
@@ -1035,7 +1036,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fill();
     ctx.fillStyle = '#f43f5e'; // Lit fuse
     ctx.fillRect(15, 6, 3, 5);
-    scene.textures.addCanvas('skill_grim_1', canvas);
+    addTex('skill_grim_1', canvas);
   }
 
   // Grim Skill 2: Shadow Step
@@ -1047,7 +1048,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillRect(10, 8, 14, 16);
     ctx.fillStyle = '#5eead4';
     ctx.fillRect(6, 18, 20, 4);
-    scene.textures.addCanvas('skill_grim_2', canvas);
+    addTex('skill_grim_2', canvas);
   }
 
   // Grim Skill 3: Explosive Cauldron (Ult)
@@ -1063,7 +1064,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     // Fiery blast
     ctx.fillStyle = '#ea580c';
     ctx.fillRect(14, 4, 4, 6);
-    scene.textures.addCanvas('skill_grim_3', canvas);
+    addTex('skill_grim_3', canvas);
   }
 
   // Bjorn Skill 1: Earthquake
@@ -1076,7 +1077,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.moveTo(8, 24); ctx.lineTo(12, 8); ctx.lineTo(16, 24); ctx.fill();
     ctx.beginPath();
     ctx.moveTo(16, 24); ctx.lineTo(20, 12); ctx.lineTo(24, 24); ctx.fill();
-    scene.textures.addCanvas('skill_bjorn_1', canvas);
+    addTex('skill_bjorn_1', canvas);
   }
 
   // Bjorn Skill 2: Shield Ram
@@ -1088,7 +1089,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillRect(10, 8, 12, 16);
     ctx.fillStyle = '#f59e0b';
     ctx.fillRect(14, 12, 4, 8); // Golden crest
-    scene.textures.addCanvas('skill_bjorn_2', canvas);
+    addTex('skill_bjorn_2', canvas);
   }
 
   // Bjorn Skill 3: Axe Cyclone (Ult)
@@ -1102,7 +1103,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillStyle = '#38bdf8';
     ctx.fillRect(4, 10, 6, 12);
     ctx.fillRect(22, 10, 6, 12);
-    scene.textures.addCanvas('skill_bjorn_3', canvas);
+    addTex('skill_bjorn_3', canvas);
   }
 
   // 7. RANK EMBLEMS
@@ -1129,7 +1130,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.lineTo(8, 28); ctx.lineTo(10, 22); ctx.lineTo(4, 16);
     ctx.lineTo(12, 14); ctx.closePath();
     ctx.fill();
-    scene.textures.addCanvas(r.key, canvas);
+    addTex(r.key, canvas);
   });
 
   // 8. Firefly particle
@@ -1139,7 +1140,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillRect(1, 1, 4, 4);
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(2, 2, 2, 2);
-    scene.textures.addCanvas('firefly', canvas);
+    addTex('firefly', canvas);
   }
 
   // 9. Menu Mouse Creature
@@ -1157,7 +1158,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     // Eye
     ctx.fillStyle = '#000000';
     ctx.fillRect(32, 8, 4, 4);
-    scene.textures.addCanvas('bg_mouse', canvas);
+    addTex('bg_mouse', canvas);
   }
 
   // 10. Dummy Enemy Target
@@ -1172,7 +1173,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     // Target bullseye
     ctx.fillStyle = '#ef4444';
     ctx.fillRect(16, 22, 8, 8);
-    scene.textures.addCanvas('target_dummy', canvas);
+    addTex('target_dummy', canvas);
   }
 
   // 11. ARCO-style Ancient Monolith Temple & Back-view Warrior
@@ -1276,7 +1277,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillStyle = '#283526';
     ctx.fillRect(80, 226, 160, 12);
 
-    scene.textures.addCanvas('arco_ruins', canvas);
+    addTex('arco_ruins', canvas);
   }
 
   {
@@ -1308,7 +1309,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillRect(10, 38, 5, 8);
     ctx.fillRect(17, 38, 5, 8);
 
-    scene.textures.addCanvas('arco_warrior', canvas);
+    addTex('arco_warrior', canvas);
   }
 
   // 12. DUNGEON ASSETS: MOBS, BOSS, CHESTS, DOORS, PICKUPS
@@ -1340,7 +1341,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillRect(24, 10, 3, 20);
     ctx.fillStyle = '#b45309';
     ctx.fillRect(22, 26, 7, 3);
-    scene.textures.addCanvas('mob_skeleton', canvas);
+    addTex('mob_skeleton', canvas);
   }
 
   {
@@ -1369,7 +1370,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     // Base droplets
     ctx.fillStyle = '#15803d';
     ctx.fillRect(4, 22, 26, 4);
-    scene.textures.addCanvas('mob_slime', canvas);
+    addTex('mob_slime', canvas);
   }
 
   {
@@ -1399,7 +1400,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fill();
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(28, 4, 2, 2);
-    scene.textures.addCanvas('mob_mage', canvas);
+    addTex('mob_mage', canvas);
   }
 
   {
@@ -1440,7 +1441,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.strokeStyle = '#f59e0b';
     ctx.lineWidth = 2;
     ctx.strokeRect(28, 14, 24, 20);
-    scene.textures.addCanvas('boss_golem', canvas);
+    addTex('boss_golem', canvas);
   }
 
   {
@@ -1459,7 +1460,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillRect(16, 13, 5, 6);
     ctx.fillStyle = '#000000';
     ctx.fillRect(18, 15, 2, 2);
-    scene.textures.addCanvas('dungeon_chest', canvas);
+    addTex('dungeon_chest', canvas);
   }
 
   {
@@ -1477,7 +1478,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillStyle = '#ef4444'; ctx.fillRect(10, 15, 3, 3);
     ctx.fillStyle = '#38bdf8'; ctx.fillRect(18, 15, 4, 4);
     ctx.fillStyle = '#4ade80'; ctx.fillRect(24, 16, 3, 3);
-    scene.textures.addCanvas('dungeon_chest_open', canvas);
+    addTex('dungeon_chest_open', canvas);
   }
 
   {
@@ -1495,7 +1496,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillRect(26, 14, 12, 12);
     ctx.strokeStyle = '#f87171';
     ctx.strokeRect(24, 12, 16, 16);
-    scene.textures.addCanvas('dungeon_door_closed', canvas);
+    addTex('dungeon_door_closed', canvas);
   }
 
   {
@@ -1508,7 +1509,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fillRect(12, 6, 40, 28);
     ctx.fillStyle = '#86efac';
     ctx.fillRect(20, 12, 24, 16);
-    scene.textures.addCanvas('dungeon_door_open', canvas);
+    addTex('dungeon_door_open', canvas);
   }
 
   {
@@ -1525,7 +1526,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fill();
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(4, 4, 2, 2);
-    scene.textures.addCanvas('heart_pickup', canvas);
+    addTex('heart_pickup', canvas);
   }
 
   {
@@ -1537,7 +1538,7 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fill();
     ctx.fillStyle = '#fef08a';
     ctx.fillRect(5, 4, 4, 6);
-    scene.textures.addCanvas('coin_pickup', canvas);
+    addTex('coin_pickup', canvas);
   }
 
   {
@@ -1551,7 +1552,1258 @@ export function generateAllTextures(scene: Phaser.Scene) {
     ctx.fill();
     ctx.fillStyle = '#e0f2fe';
     ctx.fillRect(22, 16, 4, 4);
-    scene.textures.addCanvas('dungeon_shrine', canvas);
+    addTex('dungeon_shrine', canvas);
+  }
+
+  // --- NEW DUNGEON ASSETS: Cursed Knight, Weapons, Torches, Projectiles ---
+  {
+    // Boss: Cursed Knight (Проклятый Рыцарь, 64x64)
+    const { canvas, ctx } = makeCanvas(64, 64);
+    // Dark Crimson Cape
+    ctx.fillStyle = '#7f1d1d';
+    ctx.fillRect(16, 22, 32, 36);
+    ctx.fillStyle = '#991b1b';
+    ctx.fillRect(20, 26, 24, 32);
+
+    // Heavy Dark Iron Armor Body
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(20, 20, 24, 26);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(23, 24, 18, 20);
+
+    // Pauldrons (Spiked Shoulders)
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(14, 20, 10, 10);
+    ctx.fillRect(40, 20, 10, 10);
+    ctx.fillStyle = '#dc2626'; // Red crest highlights
+    ctx.fillRect(16, 18, 4, 3);
+    ctx.fillRect(44, 18, 4, 3);
+
+    // Horned Great Helm
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(22, 6, 20, 16);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(25, 8, 14, 12);
+    // Horns
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(18, 4, 5, 8);
+    ctx.fillRect(41, 4, 5, 8);
+    ctx.fillRect(16, 2, 3, 4);
+    ctx.fillRect(45, 2, 3, 4);
+
+    // Glowing Red Visor / Slit Eyes (MENACING)
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(26, 13, 12, 3);
+    ctx.fillStyle = '#fca5a5';
+    ctx.fillRect(29, 13, 6, 2);
+
+    // Legs and Sabatons
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(22, 46, 8, 16);
+    ctx.fillRect(34, 46, 8, 16);
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(20, 58, 11, 5);
+    ctx.fillRect(33, 58, 11, 5);
+
+    // Massive Dark Rune Greatsword
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(48, 10, 4, 46); // Blade
+    ctx.fillStyle = '#ef4444'; // Glowing red edge/fuller
+    ctx.fillRect(49, 14, 2, 38);
+    ctx.fillStyle = '#d97706'; // Gold hilt & crossguard
+    ctx.fillRect(44, 42, 12, 4);
+    ctx.fillRect(49, 46, 2, 8);
+
+    addTex('boss_cursed_knight', canvas);
+  }
+
+  {
+    // Weapon: Rusty Sword (Старый ржавый меч, 24x24)
+    const { canvas, ctx } = makeCanvas(24, 24);
+    ctx.save();
+    ctx.translate(12, 12);
+    ctx.rotate(-Math.PI / 4);
+    // Blade
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(-2, -10, 4, 14);
+    ctx.fillStyle = '#b45309'; // Rust spots
+    ctx.fillRect(-1, -7, 2, 4);
+    ctx.fillRect(0, -2, 2, 3);
+    // Guard
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(-5, 4, 10, 2);
+    // Handle & pommel
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(-1, 6, 2, 5);
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(-2, 10, 4, 2);
+    ctx.restore();
+    addTex('weapon_sword', canvas);
+  }
+
+  {
+    // Weapon: Heavy Mace (Тяжелая булава, 24x24)
+    const { canvas, ctx } = makeCanvas(24, 24);
+    ctx.save();
+    ctx.translate(12, 12);
+    ctx.rotate(-Math.PI / 4);
+    // Mace head (heavy spiked iron block)
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(-5, -11, 10, 10);
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(-3, -9, 6, 6);
+    // Spikes
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(-1, -13, 2, 3);
+    ctx.fillRect(-7, -7, 3, 2);
+    ctx.fillRect(4, -7, 3, 2);
+    // Shaft
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(-2, -1, 4, 12);
+    ctx.restore();
+    addTex('weapon_mace', canvas);
+  }
+
+  {
+    // Weapon: Crossbow (Арбалет, 24x24)
+    const { canvas, ctx } = makeCanvas(24, 24);
+    // Bow wooden stock
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(10, 4, 4, 16);
+    // Bow limb (horizontal arch)
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(3, 7, 18, 3);
+    ctx.fillRect(2, 6, 3, 2);
+    ctx.fillRect(19, 6, 3, 2);
+    // String
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(3, 9, 8, 1);
+    ctx.fillRect(13, 9, 8, 1);
+    // Loaded Arrow / Bolt
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(11, 3, 2, 8);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(11, 2, 2, 2);
+    addTex('weapon_crossbow', canvas);
+  }
+
+  {
+    // Weapon: Wooden Club / Stick (Базовая палка Зазы, 24x24)
+    const { canvas, ctx } = makeCanvas(24, 24);
+    ctx.save();
+    ctx.translate(12, 12);
+    ctx.rotate(-Math.PI / 4);
+    ctx.fillStyle = '#854d0e';
+    ctx.fillRect(-3, -10, 6, 12);
+    ctx.fillStyle = '#a16207';
+    ctx.fillRect(-2, -9, 4, 6);
+    ctx.fillStyle = '#713f12';
+    ctx.fillRect(-2, 2, 4, 9);
+    ctx.restore();
+    addTex('weapon_stick', canvas);
+  }
+
+  {
+    // Gold Chest (Closed, 36x30)
+    const { canvas, ctx } = makeCanvas(36, 30);
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(3, 8, 30, 20);
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(3, 8, 5, 20);
+    ctx.fillRect(28, 8, 5, 20);
+    ctx.fillRect(3, 14, 30, 4);
+    // Ruby Lock
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(15, 12, 6, 7);
+    ctx.fillStyle = '#fecaca';
+    ctx.fillRect(17, 13, 2, 2);
+    addTex('gold_chest', canvas);
+  }
+
+  {
+    // Gold Chest (Open, 36x34)
+    const { canvas, ctx } = makeCanvas(36, 34);
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(3, 2, 30, 10);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(3, 12, 30, 20);
+    // Radiant Legendary Glow
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(6, 14, 24, 10);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(9, 16, 18, 6);
+    addTex('gold_chest_open', canvas);
+  }
+
+  {
+    // Dungeon Wall Torch (16x24)
+    const { canvas, ctx } = makeCanvas(16, 24);
+    // Iron sconce
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(6, 12, 4, 10);
+    ctx.fillRect(4, 10, 8, 3);
+    // Wood torch
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(6, 7, 4, 6);
+    // Fiery Flame
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(4, 3, 8, 6);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(5, 2, 6, 5);
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(6, 1, 4, 4);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(7, 2, 2, 2);
+    addTex('dungeon_torch', canvas);
+  }
+
+  {
+    // Projectile: Arrow / Crossbow Bolt (16x6)
+    const { canvas, ctx } = makeCanvas(16, 6);
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(2, 2, 11, 2);
+    // Arrowhead
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(13, 1, 3, 4);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(14, 2, 2, 2);
+    // Fletching (feathers)
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(0, 0, 3, 6);
+    addTex('proj_arrow', canvas);
+  }
+
+  {
+    // Projectile: Dark Fireball / Magic Orb (14x14)
+    const { canvas, ctx } = makeCanvas(14, 14);
+    ctx.fillStyle = '#581c87';
+    ctx.beginPath();
+    ctx.arc(7, 7, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#a855f7';
+    ctx.beginPath();
+    ctx.arc(7, 7, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f3e8ff';
+    ctx.fillRect(5, 5, 4, 4);
+    addTex('proj_dark_orb', canvas);
+  }
+
+  // --- SOUL KNIGHT STYLE DUNGEON TEXTURES: COMPANIONS, SHOP, PORTAL & CLASS WEAPONS ---
+  {
+    // Companion: Knight (Рыцарь-наемник, 28x32)
+    const { canvas, ctx } = makeCanvas(28, 32);
+    // Silver armor body
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(8, 10, 12, 14);
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(10, 12, 8, 10);
+    // Blue tabard
+    ctx.fillStyle = '#2563eb';
+    ctx.fillRect(11, 14, 6, 10);
+    // Helmet
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(9, 2, 10, 9);
+    ctx.fillStyle = '#facc15'; // Golden visor slit
+    ctx.fillRect(11, 6, 6, 2);
+    // Shield (Left)
+    ctx.fillStyle = '#1e3a8a';
+    ctx.fillRect(2, 10, 6, 12);
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(4, 13, 2, 6);
+    // Sword (Right)
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(21, 6, 3, 16);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(20, 22, 5, 2);
+    // Boots
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(9, 24, 4, 7);
+    ctx.fillRect(15, 24, 4, 7);
+    addTex('companion_knight', canvas);
+  }
+
+  {
+    // Companion: Dog Pet (Боевой пес, 24x20)
+    const { canvas, ctx } = makeCanvas(24, 20);
+    // Golden Brown Fur Body
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(6, 6, 14, 8);
+    // Head
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(15, 2, 7, 7);
+    // Snout
+    ctx.fillStyle = '#fde68a';
+    ctx.fillRect(19, 5, 4, 4);
+    ctx.fillStyle = '#000000'; // Nose
+    ctx.fillRect(22, 5, 2, 2);
+    // Ears
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(15, 0, 3, 3);
+    // Red Combat Collar with Gold Spikes
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(14, 6, 2, 6);
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(13, 7, 2, 2);
+    // Legs
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(7, 14, 3, 5);
+    ctx.fillRect(16, 14, 3, 5);
+    // Tail
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(2, 4, 4, 3);
+    addTex('companion_dog', canvas);
+  }
+
+  {
+    // Companion: Guardian Bear (Медведь-защитник, 34x30)
+    const { canvas, ctx } = makeCanvas(34, 30);
+    // Dark Grizzly Fur Body
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(6, 6, 22, 16);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(9, 8, 16, 12);
+    // Massive Head
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(20, 2, 10, 10);
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(25, 6, 5, 5);
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(28, 6, 2, 2);
+    // Cute Round Ears
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(21, 0, 3, 3);
+    ctx.fillRect(27, 0, 3, 3);
+    // Heavy Paws
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(8, 22, 6, 7);
+    ctx.fillRect(20, 22, 6, 7);
+    // Iron armor plate on back
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(11, 4, 10, 4);
+    ctx.fillStyle = '#38bdf8'; // Rune
+    ctx.fillRect(15, 5, 2, 2);
+    addTex('companion_bear', canvas);
+  }
+
+  {
+    // Shopkeeper: Hooded Trader (Торговец, 30x34)
+    const { canvas, ctx } = makeCanvas(30, 34);
+    // Mystical Purple Hood & Cloak
+    ctx.fillStyle = '#3b0764';
+    ctx.fillRect(6, 6, 18, 24);
+    ctx.fillStyle = '#581c87';
+    ctx.fillRect(9, 8, 12, 20);
+    // Hood Shadow & Glowing Yellow Eyes
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(9, 4, 12, 10);
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(11, 8, 3, 3);
+    ctx.fillRect(16, 8, 3, 3);
+    // Gold Pendant
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(13, 16, 4, 5);
+    // Wooden Wand in Hand
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(23, 10, 3, 18);
+    ctx.fillStyle = '#38bdf8'; // Glowing crystal tip
+    ctx.fillRect(22, 6, 5, 5);
+    addTex('dungeon_shopkeeper', canvas);
+  }
+
+  {
+    // Level Transition Portal / Cave Entrance (48x48)
+    const { canvas, ctx } = makeCanvas(48, 48);
+    // Stone Portal Arch
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(4, 4, 40, 40);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(8, 8, 32, 32);
+    // Swirling Emerald Galaxy
+    const grad = ctx.createRadialGradient(24, 24, 2, 24, 24, 18);
+    grad.addColorStop(0, '#f0fdf4');
+    grad.addColorStop(0.3, '#4ade80');
+    grad.addColorStop(0.7, '#15803d');
+    grad.addColorStop(1, '#052e16');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(24, 24, 16, 0, Math.PI * 2);
+    ctx.fill();
+    // Magical sparkle dots
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(18, 18, 3, 3);
+    ctx.fillRect(28, 22, 2, 2);
+    ctx.fillRect(22, 28, 3, 3);
+    addTex('dungeon_portal_active', canvas);
+  }
+
+  // --- CLASS SPECIFIC WEAPONS ---
+  {
+    // Toxic Scythe (Чумная коса для Зазы, 24x24)
+    const { canvas, ctx } = makeCanvas(24, 24);
+    ctx.fillStyle = '#14532d';
+    // Shaft
+    ctx.fillRect(4, 20, 16, 2);
+    // Curved glowing venom blade
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(18, 4, 4, 16);
+    ctx.fillRect(10, 2, 10, 4);
+    ctx.fillRect(4, 4, 8, 3);
+    ctx.fillStyle = '#86efac';
+    ctx.fillRect(6, 4, 6, 1);
+    addTex('weapon_scythe', canvas);
+  }
+
+  {
+    // Venom Claws (Когти мутанта, 24x24)
+    const { canvas, ctx } = makeCanvas(24, 24);
+    ctx.fillStyle = '#a855f7';
+    ctx.fillRect(6, 12, 12, 8);
+    // 3 Sharp Claws
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(6, 4, 3, 8);
+    ctx.fillRect(11, 2, 3, 10);
+    ctx.fillRect(16, 4, 3, 8);
+    addTex('weapon_claws', canvas);
+  }
+
+  {
+    // Dual Pistols (Двойные пистоли для Грима, 24x24)
+    const { canvas, ctx } = makeCanvas(24, 24);
+    // Gun 1
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(2, 4, 10, 4);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(2, 8, 4, 5);
+    // Gun 2
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(12, 10, 10, 4);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(12, 14, 4, 5);
+    addTex('weapon_pistols', canvas);
+  }
+
+  {
+    // Chemical Flask Launcher (Колбомет для Грима, 24x24)
+    const { canvas, ctx } = makeCanvas(24, 24);
+    // Heavy brass barrel
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(6, 8, 14, 7);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(2, 12, 6, 8);
+    // Loaded glowing glass canister
+    ctx.fillStyle = '#a855f7';
+    ctx.fillRect(14, 6, 6, 11);
+    ctx.fillStyle = '#f3e8ff';
+    ctx.fillRect(16, 8, 2, 4);
+    addTex('weapon_flask_launcher', canvas);
+  }
+
+  {
+    // Viking Battleaxe (Секира викинга для Бьорна, 24x24)
+    const { canvas, ctx } = makeCanvas(24, 24);
+    // Shaft
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(11, 2, 3, 20);
+    // Double crescent steel blade
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(4, 4, 7, 10);
+    ctx.fillRect(14, 4, 7, 10);
+    ctx.fillStyle = '#f1f5f9';
+    ctx.fillRect(2, 5, 3, 8);
+    ctx.fillRect(20, 5, 3, 8);
+    addTex('weapon_battleaxe', canvas);
+  }
+
+  {
+    // Thunder Hammer (Молот Тора для Бьорна, 24x24)
+    const { canvas, ctx } = makeCanvas(24, 24);
+    // Shaft
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(11, 10, 3, 12);
+    // Massive Stone/Steel Mallet Head
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(4, 2, 16, 10);
+    ctx.fillStyle = '#38bdf8'; // Electric Runes
+    ctx.fillRect(7, 5, 10, 4);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(10, 6, 4, 2);
+    addTex('weapon_thunder_hammer', canvas);
+  }
+
+  {
+    // Potions & Relics for Shop
+    // Potion HP (20x20)
+    const { canvas: c1, ctx: ctx1 } = makeCanvas(20, 20);
+    ctx1.fillStyle = '#78350f';
+    ctx1.fillRect(8, 2, 4, 3); // Cork
+    ctx1.fillStyle = '#ef4444';
+    ctx1.fillRect(4, 6, 12, 12);
+    ctx1.fillStyle = '#ffffff';
+    ctx1.fillRect(6, 8, 3, 3);
+    addTex('potion_hp', c1);
+
+    // Potion Energy (20x20)
+    const { canvas: c2, ctx: ctx2 } = makeCanvas(20, 20);
+    ctx2.fillStyle = '#78350f';
+    ctx2.fillRect(8, 2, 4, 3);
+    ctx2.fillStyle = '#38bdf8';
+    ctx2.fillRect(4, 6, 12, 12);
+    ctx2.fillStyle = '#ffffff';
+    ctx2.fillRect(6, 8, 3, 3);
+    addTex('potion_energy', c2);
+
+    // Relic Damage (20x20)
+    const { canvas: c3, ctx: ctx3 } = makeCanvas(20, 20);
+    ctx3.fillStyle = '#f59e0b';
+    ctx3.fillRect(3, 3, 14, 14);
+    ctx3.fillStyle = '#dc2626';
+    ctx3.fillRect(6, 6, 8, 8);
+    ctx3.fillStyle = '#fef08a';
+    ctx3.fillRect(8, 8, 4, 4);
+    addTex('relic_damage', c3);
+  }
+
+  // --- DUNGEON DECORATIONS & PROJECTILES ---
+  {
+    // 1. Wooden Barrel (24x28)
+    const { canvas, ctx } = makeCanvas(24, 28);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(4, 2, 16, 24);
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(2, 6, 20, 16);
+    // Steel Hoops
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(2, 6, 20, 3);
+    ctx.fillRect(2, 19, 20, 3);
+    // Wood Planks & shading
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(8, 2, 2, 24);
+    ctx.fillRect(14, 2, 2, 24);
+    ctx.fillStyle = '#fde68a';
+    ctx.fillRect(5, 8, 2, 10);
+    addTex('prop_barrel', canvas);
+  }
+
+  {
+    // 2. Supply Crate (26x26)
+    const { canvas, ctx } = makeCanvas(26, 26);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(2, 2, 22, 22);
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(4, 4, 18, 18);
+    // X-brace
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(2, 2, 22, 3);
+    ctx.fillRect(2, 21, 22, 3);
+    ctx.fillRect(2, 2, 3, 22);
+    ctx.fillRect(21, 2, 3, 22);
+    ctx.beginPath();
+    ctx.moveTo(4, 4); ctx.lineTo(22, 22);
+    ctx.moveTo(22, 4); ctx.lineTo(4, 22);
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Iron corners
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(2, 2, 5, 5);
+    ctx.fillRect(19, 2, 5, 5);
+    ctx.fillRect(2, 19, 5, 5);
+    ctx.fillRect(19, 19, 5, 5);
+    addTex('prop_crate', canvas);
+  }
+
+  {
+    // 3. Wall Torch (18x24)
+    const { canvas, ctx } = makeCanvas(18, 24);
+    // Iron sconce & bracket
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(7, 10, 4, 12);
+    ctx.fillRect(5, 14, 8, 3);
+    // Wooden handle
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(7, 6, 4, 8);
+    // Fiery Flame
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(5, 2, 8, 8);
+    ctx.fillStyle = '#f97316';
+    ctx.fillRect(6, 1, 6, 7);
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(7, 3, 4, 4);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(8, 4, 2, 2);
+    addTex('prop_torch', canvas);
+  }
+
+  {
+    // 4. Treasure Chest (28x22)
+    const { canvas, ctx } = makeCanvas(28, 22);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(2, 6, 24, 14);
+    // Gold Trim & Bands
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(2, 4, 24, 4);
+    ctx.fillRect(2, 18, 24, 3);
+    ctx.fillRect(4, 4, 3, 16);
+    ctx.fillRect(21, 4, 3, 16);
+    // Keyhole lock
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(12, 10, 4, 5);
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(13, 12, 2, 2);
+    addTex('prop_chest', canvas);
+  }
+
+  {
+    // 5. Bullet Projectile (12x6)
+    const { canvas, ctx } = makeCanvas(12, 6);
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(0, 1, 8, 4);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(8, 2, 3, 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(2, 2, 4, 2);
+    addTex('proj_bullet', canvas);
+  }
+
+  {
+    // 6. Acid Flask Projectile (14x14)
+    const { canvas, ctx } = makeCanvas(14, 14);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(5, 1, 4, 2); // Cork
+    ctx.fillStyle = '#a7f3d0';
+    ctx.fillRect(4, 3, 6, 2); // Neck
+    ctx.fillStyle = '#10b981';
+    ctx.fillRect(2, 5, 10, 8); // Body
+    ctx.fillStyle = '#34d399';
+    ctx.fillRect(4, 7, 4, 4);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(3, 6, 2, 2);
+    addTex('proj_flask', canvas);
+  }
+
+  {
+    // 7. Toxic Spit Projectile (16x16)
+    const { canvas, ctx } = makeCanvas(16, 16);
+    ctx.fillStyle = '#15803d';
+    ctx.beginPath(); ctx.arc(8, 8, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath(); ctx.arc(7, 7, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#86efac';
+    ctx.beginPath(); ctx.arc(6, 6, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(5, 5, 2, 2);
+    addTex('proj_toxic_spit', canvas);
+  }
+
+  {
+    // 8. Tar Bomb Projectile (16x16)
+    const { canvas, ctx } = makeCanvas(16, 16);
+    ctx.fillStyle = '#1e1b4b';
+    ctx.beginPath(); ctx.arc(8, 8, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#312e81';
+    ctx.beginPath(); ctx.arc(7, 7, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#818cf8';
+    ctx.fillRect(5, 5, 2, 2);
+    // fuse/spark
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(7, 0, 3, 3);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(8, 1, 2, 2);
+    addTex('proj_tar_bomb', canvas);
+  }
+
+  {
+    // 9. Cauldron Prop/Object (26x24)
+    const { canvas, ctx } = makeCanvas(26, 24);
+    ctx.fillStyle = '#18181b';
+    ctx.beginPath(); ctx.arc(13, 14, 10, 0, Math.PI * 2); ctx.fill();
+    // Cauldron rim
+    ctx.fillStyle = '#27272a';
+    ctx.fillRect(3, 6, 20, 4);
+    // Bubbling purple potion
+    ctx.fillStyle = '#9333ea';
+    ctx.fillRect(5, 7, 16, 3);
+    ctx.fillStyle = '#c084fc';
+    ctx.fillRect(7, 6, 4, 3);
+    ctx.fillRect(15, 6, 3, 2);
+    // Cauldron legs
+    ctx.fillStyle = '#18181b';
+    ctx.fillRect(4, 20, 4, 4);
+    ctx.fillRect(18, 20, 4, 4);
+    addTex('proj_cauldron', canvas);
+  }
+
+  {
+    // 10. Lightning Bolt Projectile (20x10)
+    const { canvas, ctx } = makeCanvas(20, 10);
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.moveTo(0, 5); ctx.lineTo(7, 1); ctx.lineTo(6, 4);
+    ctx.lineTo(14, 2); ctx.lineTo(12, 6); ctx.lineTo(20, 5);
+    ctx.lineTo(13, 8); ctx.lineTo(14, 6); ctx.lineTo(7, 9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(6, 4, 7, 2);
+    addTex('proj_lightning_bolt', canvas);
+  }
+
+  {
+    // 11. Rock Spike Prop/Attack (24x28)
+    const { canvas, ctx } = makeCanvas(24, 28);
+    ctx.fillStyle = '#44403c';
+    ctx.beginPath();
+    ctx.moveTo(12, 2); ctx.lineTo(22, 26); ctx.lineTo(2, 26); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#78716c';
+    ctx.beginPath();
+    ctx.moveTo(12, 4); ctx.lineTo(20, 24); ctx.lineTo(12, 24); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#a8a29e';
+    ctx.fillRect(11, 8, 2, 8);
+    addTex('proj_rock_spike', canvas);
+  }
+
+  {
+    // 12. Skull Pile Prop (22x18)
+    const { canvas, ctx } = makeCanvas(22, 18);
+    ctx.fillStyle = '#18181b';
+    ctx.beginPath(); ctx.arc(11, 9, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath(); ctx.arc(11, 8, 6.5, 0, Math.PI * 2); ctx.fill();
+    // Eye sockets & nose
+    ctx.fillStyle = '#18181b';
+    ctx.fillRect(8, 7, 2, 3);
+    ctx.fillRect(12, 7, 2, 3);
+    ctx.fillRect(10, 11, 2, 2);
+    // Teeth
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(8, 13, 6, 2);
+    addTex('prop_skull_pile', canvas);
+  }
+
+  {
+    // 13. Cobweb Prop (24x24)
+    const { canvas, ctx } = makeCanvas(24, 24);
+    ctx.strokeStyle = 'rgba(241, 245, 249, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(24, 24);
+    ctx.moveTo(0, 0); ctx.lineTo(24, 8);
+    ctx.moveTo(0, 0); ctx.lineTo(8, 24);
+    ctx.arc(0, 0, 10, 0, Math.PI / 2);
+    ctx.arc(0, 0, 18, 0, Math.PI / 2);
+    ctx.stroke();
+    addTex('prop_cobweb', canvas);
+  }
+
+  {
+    // 14. Ancient Glowing Rune Stone (22x28)
+    const { canvas, ctx } = makeCanvas(22, 28);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(2, 4, 18, 22);
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(4, 6, 14, 18);
+    // Glowing cyan rune symbol
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(11, 9); ctx.lineTo(11, 21);
+    ctx.moveTo(7, 13); ctx.lineTo(15, 17);
+    ctx.moveTo(15, 13); ctx.lineTo(7, 17);
+    ctx.stroke();
+    addTex('prop_rune_stone', canvas);
+  }
+
+  {
+    // 15. Broken Pillar Prop (24x32)
+    const { canvas, ctx } = makeCanvas(24, 32);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(2, 22, 20, 8);
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(4, 8, 16, 16);
+    // Broken jagged top
+    ctx.fillStyle = '#334155';
+    ctx.beginPath();
+    ctx.moveTo(4, 8); ctx.lineTo(8, 2); ctx.lineTo(13, 8); ctx.lineTo(18, 4); ctx.lineTo(20, 8); ctx.closePath();
+    ctx.fill();
+    addTex('prop_pillar_broken', canvas);
+  }
+
+  {
+    // 16. Explosive Red Barrel Prop (20x24)
+    const { canvas, ctx } = makeCanvas(20, 24);
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(2, 2, 16, 20);
+    // Dark hoops
+    ctx.fillStyle = '#7f1d1d';
+    ctx.fillRect(2, 5, 16, 3);
+    ctx.fillRect(2, 16, 16, 3);
+    // Yellow Danger mark
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(8, 9, 4, 6);
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(9, 10, 2, 3);
+    ctx.fillRect(9, 14, 2, 1);
+    addTex('prop_explosive_barrel', canvas);
+  }
+
+  {
+    // 17. Goblin Bomber Mob (24x26)
+    const { canvas, ctx } = makeCanvas(24, 26);
+    // Green skin body & big ears
+    ctx.fillStyle = '#15803d';
+    ctx.fillRect(4, 8, 16, 12);
+    ctx.fillRect(1, 6, 6, 6); // Left ear
+    ctx.fillRect(17, 6, 6, 6); // Right ear
+    // Leather harness / rags
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(5, 14, 14, 8);
+    // Evil yellow eyes
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(7, 9, 3, 3);
+    ctx.fillRect(14, 9, 3, 3);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(8, 10, 1, 1);
+    ctx.fillRect(15, 10, 1, 1);
+    // Holding round fuse bomb
+    ctx.fillStyle = '#18181b';
+    ctx.beginPath(); ctx.arc(18, 18, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(18, 12, 2, 2); // Spark
+    addTex('mob_goblin_bomber', canvas);
+  }
+
+  {
+    // 18. Venom Spider Mob (26x20)
+    const { canvas, ctx } = makeCanvas(26, 20);
+    // Spider legs
+    ctx.fillStyle = '#1e1b4b';
+    ctx.fillRect(2, 4, 3, 12); ctx.fillRect(21, 4, 3, 12);
+    ctx.fillRect(0, 8, 4, 8); ctx.fillRect(22, 8, 4, 8);
+    // Spider body
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath(); ctx.arc(13, 10, 8, 0, Math.PI * 2); ctx.fill();
+    // Toxic green glowing pattern
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(11, 7, 4, 6);
+    // Red glowing multi-eyes
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(9, 5, 2, 2); ctx.fillRect(15, 5, 2, 2);
+    ctx.fillRect(11, 4, 2, 2); ctx.fillRect(13, 4, 2, 2);
+    addTex('mob_spider', canvas);
+  }
+
+  {
+    // 19. Dark Necromancer Mob (24x28)
+    const { canvas, ctx } = makeCanvas(24, 28);
+    // Dark purple hooded robe
+    ctx.fillStyle = '#3b0764';
+    ctx.fillRect(5, 4, 14, 22);
+    ctx.fillRect(4, 12, 16, 14);
+    // Hood Shadow
+    ctx.fillStyle = '#18022e';
+    ctx.fillRect(7, 6, 10, 8);
+    // Glowing cyan skull eyes inside hood
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(8, 9, 2, 2); ctx.fillRect(14, 9, 2, 2);
+    // Bone Staff with Skull topper
+    ctx.fillStyle = '#78716c';
+    ctx.fillRect(18, 2, 3, 24);
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(17, 0, 5, 5);
+    ctx.fillStyle = '#a855f7';
+    ctx.fillRect(18, 1, 3, 3); // Glow
+    addTex('mob_necromancer', canvas);
+  }
+
+  {
+    // 20. New Weapons (Zaza, Grim, Bjorn)
+    // 20a. weapon_toxic_staff (24x24)
+    const { canvas: c1, ctx: ctx1 } = makeCanvas(24, 24);
+    ctx1.fillStyle = '#713f12'; ctx1.fillRect(4, 4, 4, 18);
+    ctx1.fillStyle = '#22c55e'; ctx1.beginPath(); ctx1.arc(6, 4, 5, 0, Math.PI * 2); ctx1.fill();
+    ctx1.fillStyle = '#a7f3d0'; ctx1.fillRect(5, 3, 3, 3);
+    addTex('weapon_toxic_staff', c1);
+
+    // 20b. weapon_mutant_blade (24x24)
+    const { canvas: c2, ctx: ctx2 } = makeCanvas(24, 24);
+    ctx2.fillStyle = '#4c1d95'; ctx2.fillRect(4, 18, 4, 4);
+    ctx2.fillStyle = '#10b981'; ctx2.beginPath();
+    ctx2.moveTo(8, 18); ctx2.lineTo(20, 2); ctx2.lineTo(22, 5); ctx2.lineTo(11, 21); ctx2.closePath(); ctx2.fill();
+    addTex('weapon_mutant_blade', c2);
+
+    // 20c. weapon_repeater_crossbow (24x24)
+    const { canvas: c3, ctx: ctx3 } = makeCanvas(24, 24);
+    ctx3.fillStyle = '#78350f'; ctx3.fillRect(4, 10, 16, 4);
+    ctx3.fillStyle = '#475569'; ctx3.fillRect(8, 4, 4, 16);
+    ctx3.fillStyle = '#38bdf8'; ctx3.fillRect(18, 9, 4, 6);
+    addTex('weapon_repeater_crossbow', c3);
+
+    // 20d. weapon_grenade_launcher (24x24)
+    const { canvas: c4, ctx: ctx4 } = makeCanvas(24, 24);
+    ctx4.fillStyle = '#1e293b'; ctx4.fillRect(3, 8, 18, 8);
+    ctx4.fillStyle = '#f59e0b'; ctx4.fillRect(18, 7, 4, 10);
+    ctx4.fillStyle = '#475569'; ctx4.fillRect(6, 16, 5, 6);
+    addTex('weapon_grenade_launcher', c4);
+
+    // 20e. weapon_frost_hammer (24x24)
+    const { canvas: c5, ctx: ctx5 } = makeCanvas(24, 24);
+    ctx5.fillStyle = '#78716c'; ctx5.fillRect(4, 4, 4, 18);
+    ctx5.fillStyle = '#0284c7'; ctx5.fillRect(2, 2, 14, 8);
+    ctx5.fillStyle = '#e0f2fe'; ctx5.fillRect(4, 4, 10, 4);
+    addTex('weapon_frost_hammer', c5);
+
+    // 20f. weapon_dual_daggers (24x24)
+    const { canvas: c6, ctx: ctx6 } = makeCanvas(24, 24);
+    ctx6.fillStyle = '#ef4444';
+    ctx6.fillRect(3, 4, 8, 16); ctx6.fillRect(13, 4, 8, 16);
+    ctx6.fillStyle = '#ffffff'; ctx6.fillRect(5, 2, 4, 14); ctx6.fillRect(15, 2, 4, 14);
+    addTex('weapon_dual_daggers', c6);
+  }
+
+  {
+    // 21. Additional Special Projectiles
+    // 21a. proj_goblin_bomb (14x14)
+    const { canvas: p1, ctx: cp1 } = makeCanvas(14, 14);
+    cp1.fillStyle = '#18181b'; cp1.beginPath(); cp1.arc(7, 7, 6, 0, Math.PI * 2); cp1.fill();
+    cp1.fillStyle = '#f59e0b'; cp1.fillRect(6, 0, 2, 3);
+    cp1.fillStyle = '#ef4444'; cp1.fillRect(7, 0, 2, 2);
+    addTex('proj_goblin_bomb', p1);
+
+    // 21b. proj_web_shot (16x16)
+    const { canvas: p2, ctx: cp2 } = makeCanvas(16, 16);
+    cp2.strokeStyle = '#22c55e'; cp2.lineWidth = 1.5;
+    cp2.beginPath();
+    cp2.moveTo(2, 8); cp2.lineTo(14, 8); cp2.moveTo(8, 2); cp2.lineTo(8, 14);
+    cp2.stroke();
+    addTex('proj_web_shot', p2);
+
+    // 21c. proj_skull_homing (16x16)
+    const { canvas: p3, ctx: cp3 } = makeCanvas(16, 16);
+    cp3.fillStyle = '#e2e8f0'; cp3.beginPath(); cp3.arc(8, 8, 6, 0, Math.PI * 2); cp3.fill();
+    cp3.fillStyle = '#a855f7'; cp3.fillRect(6, 6, 2, 2); cp3.fillRect(10, 6, 2, 2);
+    addTex('proj_skull_homing', p3);
+
+    // 21d. proj_sonic_wave (20x20)
+    const { canvas: p4, ctx: cp4 } = makeCanvas(20, 20);
+    cp4.strokeStyle = '#38bdf8'; cp4.lineWidth = 2.5;
+    cp4.beginPath(); cp4.arc(10, 10, 8, -Math.PI / 3, Math.PI / 3); cp4.stroke();
+    addTex('proj_sonic_wave', p4);
+
+    // 21e. proj_fire_slash (22x22)
+    const { canvas: p5, ctx: cp5 } = makeCanvas(22, 22);
+    cp5.fillStyle = '#f97316';
+    cp5.beginPath();
+    cp5.moveTo(2, 11); cp5.quadraticCurveTo(11, 2, 20, 11); cp5.quadraticCurveTo(11, 16, 2, 11);
+    cp5.fill();
+    cp5.fillStyle = '#fde047';
+    cp5.beginPath();
+    cp5.moveTo(5, 11); cp5.quadraticCurveTo(11, 6, 17, 11); cp5.quadraticCurveTo(11, 13, 5, 11);
+    cp5.fill();
+    addTex('proj_fire_slash', p5);
+
+    // 21f. proj_ice_shard (16x16)
+    const { canvas: p6, ctx: cp6 } = makeCanvas(16, 16);
+    cp6.fillStyle = '#67e8f9';
+    cp6.beginPath();
+    cp6.moveTo(8, 1); cp6.lineTo(13, 8); cp6.lineTo(8, 15); cp6.lineTo(3, 8);
+    cp6.closePath(); cp6.fill();
+    cp6.fillStyle = '#ffffff'; cp6.fillRect(7, 4, 2, 8);
+    addTex('proj_ice_shard', p6);
+  }
+
+  {
+    // 22. 3 NEW UNIQUE MOBS
+    // 22a. mob_gargoyle (Stone Gargoyle, 32x32)
+    const { canvas: gC, ctx: gCtx } = makeCanvas(32, 32);
+    // Stone wings
+    gCtx.fillStyle = '#475569';
+    gCtx.beginPath();
+    gCtx.moveTo(4, 6); gCtx.lineTo(12, 16); gCtx.lineTo(2, 22); gCtx.closePath(); gCtx.fill();
+    gCtx.beginPath();
+    gCtx.moveTo(28, 6); gCtx.lineTo(20, 16); gCtx.lineTo(30, 22); gCtx.closePath(); gCtx.fill();
+    // Gargoyle stone body
+    gCtx.fillStyle = '#64748b'; gCtx.fillRect(10, 10, 12, 16);
+    // Horns
+    gCtx.fillStyle = '#334155';
+    gCtx.fillRect(9, 4, 3, 6); gCtx.fillRect(20, 4, 3, 6);
+    // Glowing Red Eyes
+    gCtx.fillStyle = '#ef4444'; gCtx.fillRect(12, 12, 3, 3); gCtx.fillRect(17, 12, 3, 3);
+    // Claws
+    gCtx.fillStyle = '#1e293b'; gCtx.fillRect(10, 26, 4, 4); gCtx.fillRect(18, 26, 4, 4);
+    addTex('mob_gargoyle', gC);
+
+    // 22b. mob_necromancer (Dark Cult Necromancer, 32x32)
+    const { canvas: nC, ctx: nCtx } = makeCanvas(32, 32);
+    // Dark purple robe
+    nCtx.fillStyle = '#3b0764'; nCtx.fillRect(8, 12, 16, 18);
+    // Hood & Skull Face
+    nCtx.fillStyle = '#581c87'; nCtx.fillRect(10, 4, 12, 10);
+    nCtx.fillStyle = '#f8fafc'; nCtx.fillRect(12, 8, 8, 6);
+    // Glowing Green / Cyan Eyes
+    nCtx.fillStyle = '#10b981'; nCtx.fillRect(13, 9, 2, 2); nCtx.fillRect(17, 9, 2, 2);
+    // Staff with skull
+    nCtx.fillStyle = '#713f12'; nCtx.fillRect(24, 6, 2, 22);
+    nCtx.fillStyle = '#a855f7'; nCtx.beginPath(); nCtx.arc(25, 6, 4, 0, Math.PI * 2); nCtx.fill();
+    addTex('mob_necromancer', nC);
+
+    // 22c. mob_golem (Ancient Rune Stone Golem, 36x36)
+    const { canvas: gmC, ctx: gmCtx } = makeCanvas(36, 36);
+    // Heavy boulder body
+    gmCtx.fillStyle = '#334155'; gmCtx.fillRect(6, 8, 24, 22);
+    gmCtx.fillStyle = '#475569'; gmCtx.fillRect(8, 10, 20, 18);
+    // Glowing Blue/Gold Runes
+    gmCtx.fillStyle = '#38bdf8';
+    gmCtx.fillRect(12, 14, 12, 3);
+    gmCtx.fillRect(17, 12, 2, 8);
+    // Heavy Fists
+    gmCtx.fillStyle = '#1e293b';
+    gmCtx.fillRect(2, 14, 6, 12); gmCtx.fillRect(28, 14, 6, 12);
+    // Golem glowing eye slit
+    gmCtx.fillStyle = '#facc15'; gmCtx.fillRect(14, 10, 8, 3);
+    addTex('mob_golem', gmC);
+  }
+
+  {
+    // 23. Skill Cards Icons
+    const cards = [
+      { id: 'skill_card_zaza_1', col: '#15803d', iconCol: '#86efac' },
+      { id: 'skill_card_zaza_2', col: '#166534', iconCol: '#4ade80' },
+      { id: 'skill_card_grim_1', col: '#0284c7', iconCol: '#7dd3fc' },
+      { id: 'skill_card_grim_2', col: '#475569', iconCol: '#cbd5e1' },
+      { id: 'skill_card_bjorn_1', col: '#b91c1c', iconCol: '#fca5a5' },
+      { id: 'skill_card_bjorn_2', col: '#c2410c', iconCol: '#fdba74' },
+    ];
+    cards.forEach(c => {
+      const { canvas, ctx } = makeCanvas(32, 32);
+      ctx.fillStyle = c.col; ctx.fillRect(2, 2, 28, 28);
+      ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2; ctx.strokeRect(2, 2, 28, 28);
+      ctx.fillStyle = c.iconCol; ctx.beginPath(); ctx.arc(16, 16, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(14, 10, 4, 12); ctx.fillRect(10, 14, 12, 4);
+      addTex(c.id, canvas);
+    });
+  }
+
+  // 24. SQUARE AVATAR PORTRAITS (8 Unique Hero Avatars 64x64)
+  {
+    // 1. Гром (Grom - Shadow Assassin)
+    {
+      const { canvas, ctx } = makeCanvas(64, 64);
+      ctx.fillStyle = '#090d16'; ctx.fillRect(0, 0, 64, 64);
+      ctx.lineWidth = 3; ctx.strokeStyle = '#facc15'; ctx.strokeRect(2, 2, 60, 60);
+      ctx.fillStyle = '#1e293b'; ctx.fillRect(16, 12, 32, 40);
+      ctx.fillStyle = '#0f172a'; ctx.fillRect(20, 24, 24, 20);
+      ctx.fillStyle = '#ef4444'; ctx.fillRect(24, 28, 6, 5); ctx.fillRect(34, 28, 6, 5);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(26, 29, 2, 2); ctx.fillRect(36, 29, 2, 2);
+      ctx.fillStyle = '#facc15'; ctx.fillRect(44, 44, 14, 14);
+      ctx.fillStyle = '#000000'; ctx.font = '10px monospace'; ctx.fillText('1', 48, 55);
+      addTex('avatar_sq_1', canvas);
+    }
+
+    // 2. Заза (Zaza - Green Goblin Alchemist)
+    {
+      const { canvas, ctx } = makeCanvas(64, 64);
+      ctx.fillStyle = '#051f12'; ctx.fillRect(0, 0, 64, 64);
+      ctx.lineWidth = 3; ctx.strokeStyle = '#22c55e'; ctx.strokeRect(2, 2, 60, 60);
+      // Big Pointed Goblin Ears
+      ctx.fillStyle = '#15803d';
+      ctx.beginPath(); ctx.moveTo(14, 24); ctx.lineTo(2, 14); ctx.lineTo(16, 36); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(50, 24); ctx.lineTo(62, 14); ctx.lineTo(48, 36); ctx.fill();
+      // Goblin Head
+      ctx.fillStyle = '#16a34a'; ctx.fillRect(16, 12, 32, 38);
+      // Toxic Green Eyes
+      ctx.fillStyle = '#facc15'; ctx.fillRect(22, 22, 7, 6); ctx.fillRect(35, 22, 7, 6);
+      ctx.fillStyle = '#000000'; ctx.fillRect(25, 24, 3, 3); ctx.fillRect(38, 24, 3, 3);
+      // Sharp Fangs & Grin
+      ctx.fillStyle = '#052e16'; ctx.fillRect(22, 36, 20, 8);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(24, 36, 3, 5); ctx.fillRect(37, 36, 3, 5);
+      ctx.fillStyle = '#22c55e'; ctx.fillRect(44, 44, 14, 14);
+      ctx.fillStyle = '#000000'; ctx.font = '10px monospace'; ctx.fillText('2', 48, 55);
+      addTex('avatar_sq_2', canvas);
+    }
+
+    // 3. Бьёрн (Bjorn - Viking Berserker with Horned Helm & Beard)
+    {
+      const { canvas, ctx } = makeCanvas(64, 64);
+      ctx.fillStyle = '#1c0a0a'; ctx.fillRect(0, 0, 64, 64);
+      ctx.lineWidth = 3; ctx.strokeStyle = '#f97316'; ctx.strokeRect(2, 2, 60, 60);
+      // Giant Horns
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath(); ctx.moveTo(14, 18); ctx.lineTo(4, 4); ctx.lineTo(20, 14); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(50, 18); ctx.lineTo(60, 4); ctx.lineTo(44, 14); ctx.fill();
+      // Iron Helm
+      ctx.fillStyle = '#475569'; ctx.fillRect(16, 12, 32, 20);
+      ctx.fillStyle = '#94a3b8'; ctx.fillRect(16, 20, 32, 4);
+      // Glowing Eyes Slit
+      ctx.fillStyle = '#fde047'; ctx.fillRect(22, 24, 6, 4); ctx.fillRect(36, 24, 6, 4);
+      // Braided Orange Beard
+      ctx.fillStyle = '#ea580c'; ctx.fillRect(14, 30, 36, 26);
+      ctx.fillStyle = '#c2410c'; ctx.fillRect(20, 42, 8, 12); ctx.fillRect(36, 42, 8, 12);
+      ctx.fillStyle = '#f97316'; ctx.fillRect(44, 44, 14, 14);
+      ctx.fillStyle = '#000000'; ctx.font = '10px monospace'; ctx.fillText('3', 48, 55);
+      addTex('avatar_sq_3', canvas);
+    }
+
+    // 4. Рыцарь (Knight - Steel Paladin)
+    {
+      const { canvas, ctx } = makeCanvas(64, 64);
+      ctx.fillStyle = '#081726'; ctx.fillRect(0, 0, 64, 64);
+      ctx.lineWidth = 3; ctx.strokeStyle = '#38bdf8'; ctx.strokeRect(2, 2, 60, 60);
+      // Blue Plume
+      ctx.fillStyle = '#2563eb'; ctx.fillRect(28, 4, 8, 12);
+      // Steel Helmet
+      ctx.fillStyle = '#64748b'; ctx.fillRect(16, 14, 32, 38);
+      ctx.fillStyle = '#94a3b8'; ctx.fillRect(18, 16, 28, 18);
+      // Gold Visor T-slit
+      ctx.fillStyle = '#facc15'; ctx.fillRect(20, 26, 24, 4); ctx.fillRect(30, 24, 4, 12);
+      ctx.fillStyle = '#38bdf8'; ctx.fillRect(44, 44, 14, 14);
+      ctx.fillStyle = '#000000'; ctx.font = '10px monospace'; ctx.fillText('4', 48, 55);
+      addTex('avatar_sq_4', canvas);
+    }
+
+    // 5. Маг (Mage - Arcane Sorcerer)
+    {
+      const { canvas, ctx } = makeCanvas(64, 64);
+      ctx.fillStyle = '#1c051d'; ctx.fillRect(0, 0, 64, 64);
+      ctx.lineWidth = 3; ctx.strokeStyle = '#c084fc'; ctx.strokeRect(2, 2, 60, 60);
+      // Pointed Wizard Hat
+      ctx.fillStyle = '#6b21a8';
+      ctx.beginPath(); ctx.moveTo(32, 2); ctx.lineTo(12, 24); ctx.lineTo(52, 24); ctx.fill();
+      ctx.fillStyle = '#facc15'; ctx.fillRect(10, 22, 44, 4);
+      // Dark Face Mask
+      ctx.fillStyle = '#3b0764'; ctx.fillRect(18, 26, 28, 24);
+      // Glowing Magenta Eyes
+      ctx.fillStyle = '#f43f5e'; ctx.fillRect(22, 32, 6, 5); ctx.fillRect(36, 32, 6, 5);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(24, 33, 2, 2); ctx.fillRect(38, 33, 2, 2);
+      ctx.fillStyle = '#c084fc'; ctx.fillRect(44, 44, 14, 14);
+      ctx.fillStyle = '#000000'; ctx.font = '10px monospace'; ctx.fillText('5', 48, 55);
+      addTex('avatar_sq_5', canvas);
+    }
+
+    // 6. Следопыт (Ranger - Elf Tracker)
+    {
+      const { canvas, ctx } = makeCanvas(64, 64);
+      ctx.fillStyle = '#0e1e12'; ctx.fillRect(0, 0, 64, 64);
+      ctx.lineWidth = 3; ctx.strokeStyle = '#a3e635'; ctx.strokeRect(2, 2, 60, 60);
+      // Green Forest Hood
+      ctx.fillStyle = '#15803d'; ctx.fillRect(14, 10, 36, 42);
+      ctx.fillStyle = '#166534'; ctx.fillRect(18, 20, 28, 26);
+      // Elf Eyes
+      ctx.fillStyle = '#bef264'; ctx.fillRect(22, 26, 6, 4); ctx.fillRect(36, 26, 6, 4);
+      // Leaf Brooch
+      ctx.fillStyle = '#facc15'; ctx.beginPath(); ctx.arc(32, 44, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#a3e635'; ctx.fillRect(44, 44, 14, 14);
+      ctx.fillStyle = '#000000'; ctx.font = '10px monospace'; ctx.fillText('6', 48, 55);
+      addTex('avatar_sq_6', canvas);
+    }
+
+    // 7. Проклятый (Cursed Knight - Fiery Skeleton Lord)
+    {
+      const { canvas, ctx } = makeCanvas(64, 64);
+      ctx.fillStyle = '#180e0e'; ctx.fillRect(0, 0, 64, 64);
+      ctx.lineWidth = 3; ctx.strokeStyle = '#e11d48'; ctx.strokeRect(2, 2, 60, 60);
+      // Demon Horns
+      ctx.fillStyle = '#be123c';
+      ctx.fillRect(12, 6, 6, 18); ctx.fillRect(46, 6, 6, 18);
+      // Skull Face
+      ctx.fillStyle = '#f1f5f9'; ctx.fillRect(18, 16, 28, 32);
+      // Fiery Socket Eyes
+      ctx.fillStyle = '#dc2626'; ctx.fillRect(22, 24, 7, 7); ctx.fillRect(35, 24, 7, 7);
+      ctx.fillStyle = '#fef08a'; ctx.fillRect(24, 26, 3, 3); ctx.fillRect(37, 26, 3, 3);
+      // Skull Teeth
+      ctx.fillStyle = '#000000'; ctx.fillRect(22, 38, 20, 6);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(24, 38, 3, 6); ctx.fillRect(30, 38, 3, 6); ctx.fillRect(36, 38, 3, 6);
+      ctx.fillStyle = '#e11d48'; ctx.fillRect(44, 44, 14, 14);
+      ctx.fillStyle = '#000000'; ctx.font = '10px monospace'; ctx.fillText('7', 48, 55);
+      addTex('avatar_sq_7', canvas);
+    }
+  }
+
+  // 25. Track 3 Cover Art & Purple Void Overlord Avatar (64x64)
+  {
+    const { canvas, ctx } = makeCanvas(64, 64);
+    // Dark Purple Abyss Background
+    ctx.fillStyle = '#1e1b4b'; ctx.fillRect(0, 0, 64, 64);
+    ctx.fillStyle = '#311042'; ctx.fillRect(4, 4, 56, 56);
+
+    // Glowing Purple Frame Border
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#c084fc';
+    ctx.strokeRect(2, 2, 60, 60);
+
+    // Purple Crown / Horns
+    ctx.fillStyle = '#e879f9';
+    ctx.beginPath();
+    ctx.moveTo(16, 20); ctx.lineTo(24, 8); ctx.lineTo(32, 18); ctx.lineTo(40, 8); ctx.lineTo(48, 20);
+    ctx.closePath(); ctx.fill();
+
+    // Dark Hood & Robe Body
+    ctx.fillStyle = '#0f051d';
+    ctx.fillRect(14, 20, 36, 38);
+
+    // Floating Purple Energy Flames
+    ctx.fillStyle = '#a855f7';
+    ctx.fillRect(8, 32, 8, 16); ctx.fillRect(48, 32, 8, 16);
+    ctx.fillStyle = '#f0abfc';
+    ctx.fillRect(10, 36, 4, 8); ctx.fillRect(50, 36, 4, 8);
+
+    // Glowing Eyes & Face Visor
+    ctx.fillStyle = '#fae8ff';
+    ctx.fillRect(22, 28, 6, 4); ctx.fillRect(36, 28, 6, 4);
+
+    // 5 Stars Emblem in bottom
+    ctx.fillStyle = '#facc15';
+    for (let s = 0; s < 5; s++) {
+      ctx.fillRect(18 + s * 6, 52, 4, 4);
+    }
+
+    addTex('VoidOverlordPic', canvas);
+  }
+
+  // 26. Avatar 8: Nightfall Wanderer (Uploaded Custom Artwork)
+  {
+    const { canvas, ctx } = makeCanvas(64, 64);
+    // Dark Moonlit Sky & Mountains
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, 64, 64);
+    ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 24, 64, 20);
+
+    // Full Golden Moon
+    ctx.fillStyle = '#fef08a';
+    ctx.beginPath(); ctx.arc(48, 14, 8, 0, Math.PI * 2); ctx.fill();
+
+    // Dark Distant Castle Towers
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(52, 18, 10, 28);
+    ctx.fillRect(4, 22, 12, 24);
+
+    // Golden Cliff Edge
+    ctx.fillStyle = '#78350f'; ctx.fillRect(0, 42, 64, 22);
+    ctx.fillStyle = '#451a03'; ctx.fillRect(0, 48, 64, 16);
+
+    // Sword in the Stone
+    ctx.fillStyle = '#94a3b8'; ctx.fillRect(12, 34, 3, 14); ctx.fillRect(10, 38, 7, 2);
+
+    // Brown Hooded Pilgrim Back View
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(26, 18, 12, 12); // Hood
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(22, 28, 20, 26); // Robe Body
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(28, 38, 8, 2); // Belt
+
+    // Two Glowing Yellow Eyes in Hood
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(29, 23, 2, 4); ctx.fillRect(33, 23, 2, 4);
+
+    // Gold Frame Border
+    ctx.lineWidth = 3; ctx.strokeStyle = '#facc15'; ctx.strokeRect(2, 2, 60, 60);
+    ctx.fillStyle = '#facc15'; ctx.fillRect(44, 44, 14, 14);
+    ctx.fillStyle = '#000000'; ctx.font = '10px monospace'; ctx.fillText('8', 48, 55);
+
+    addTex('avatar_sq_8', canvas);
   }
 }
+
 

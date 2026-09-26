@@ -36,8 +36,17 @@ export class MainMenuScene extends Phaser.Scene {
   private musicPanel!: Phaser.GameObjects.Container;
   private track1CardBg!: Phaser.GameObjects.Rectangle;
   private track2CardBg!: Phaser.GameObjects.Rectangle;
+  private track3CardBg!: Phaser.GameObjects.Rectangle;
   private track1BtnTxt!: Phaser.GameObjects.Text;
   private track2BtnTxt!: Phaser.GameObjects.Text;
+  private track3BtnTxt!: Phaser.GameObjects.Text;
+
+  // Adventurer Profile Panel (7 Avatars & Fantasy Lore)
+  private profilePanel!: Phaser.GameObjects.Container;
+  private selectedAvatarKey = 'char_grim';
+  private avatarCards: Array<{ key: string; bg: Phaser.GameObjects.Rectangle }> = [];
+  private profileNameText!: Phaser.GameObjects.Text;
+  private profileAvatarImage!: Phaser.GameObjects.Image;
 
   private isPC = false;
   private currentSettingsTab: 'sounds' | 'controls' = 'sounds';
@@ -58,7 +67,15 @@ export class MainMenuScene extends Phaser.Scene {
     this.cameras.main.fadeIn(400, 0, 0, 0);
 
     // 1. Deep dark fantasy mossy forest background
-    this.bgRect = this.add.rectangle(0, 0, width, height, 0x07110c).setOrigin(0, 0);
+    this.bgRect = this.add.rectangle(0, 0, width, height, 0x050807).setOrigin(0, 0);
+
+    // Vignette overlay for dark atmospheric edges
+    const vignette = this.add.graphics();
+    vignette.fillStyle(0x000000, 0.45);
+    vignette.fillRect(0, 0, width, height);
+    vignette.fillStyle(0x000000, 0.65);
+    vignette.fillRect(0, 0, width, 60);
+    vignette.fillRect(0, height - 60, width, 60);
 
     // Decorative forest canopy silhouettes
     const darkTreesLeft = this.add.rectangle(-40, height / 2, 120, height * 1.5, 0x040906).setOrigin(0, 0.5);
@@ -185,9 +202,6 @@ export class MainMenuScene extends Phaser.Scene {
     this.input.once('pointerdown', () => {
       soundEngine.startMusic();
     });
-
-    // Listen to window / scale resize
-    this.scale.on('resize', this.handleResize, this);
   }
 
   private addMenuButtonToContainer(
@@ -280,8 +294,8 @@ export class MainMenuScene extends Phaser.Scene {
 
   private layoutElements(width: number, height: number) {
     // 1. Background
-    if (this.bgRect) {
-      this.bgRect.setSize(width, height);
+    if (this.bgRect && typeof this.bgRect.setDisplaySize === 'function') {
+      this.bgRect.setDisplaySize(width, height);
     }
 
     // 2. Ruins & Cave Entrance: Lowered comfortably so the composition is balanced and hero on path is visible
@@ -304,8 +318,8 @@ export class MainMenuScene extends Phaser.Scene {
     if (this.popupContainer) {
       const popupScale = Phaser.Math.Clamp(Math.min((width * 0.92) / 520, (height * 0.90) / 360), 0.75, 2.1);
       this.popupContainer.setPosition(width / 2, height / 2).setScale(popupScale);
-      if (this.popupDimBackdrop) {
-        this.popupDimBackdrop.setSize(width * 4, height * 4);
+      if (this.popupDimBackdrop && typeof this.popupDimBackdrop.setDisplaySize === 'function') {
+        this.popupDimBackdrop.setDisplaySize(width * 4, height * 4);
       }
     }
   }
@@ -460,6 +474,10 @@ export class MainMenuScene extends Phaser.Scene {
     // Separate Music Selection Modal Panel
     this.buildMusicSelectionPanel();
     this.popupContainer.add(this.musicPanel);
+
+    // Adventurer Profile Panel (7 Avatars & Fantasy Lore)
+    this.buildProfilePanel();
+    this.popupContainer.add(this.profilePanel);
   }
 
   private showExitPopup() {
@@ -496,31 +514,24 @@ export class MainMenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Track 1 Card: WIKLUND
-    const t1X = -120;
+    const t1X = -170;
     const t1Y = -15;
-    this.track1CardBg = this.add.rectangle(t1X, t1Y, 200, 195, 0x1e293b)
+    this.track1CardBg = this.add.rectangle(t1X, t1Y, 155, 185, 0x1e293b)
       .setStrokeStyle(3, soundEngine.getSelectedTrack() === 'Wiklund' ? 0x4ade80 : 0x475569)
       .setInteractive({ useHandCursor: true });
 
-    const pic1 = this.add.image(t1X, t1Y - 35, 'WiklundPic').setDisplaySize(96, 96);
+    const pic1 = this.add.image(t1X, t1Y - 35, 'WiklundPic').setDisplaySize(72, 72);
 
-    const name1 = this.add.text(t1X, t1Y + 28, 'WIKLUND', {
-      fontSize: '16px',
-      fontFamily: 'monospace',
-      fontStyle: 'bold',
-      color: '#fef08a'
+    const name1 = this.add.text(t1X, t1Y + 22, 'WIKLUND', {
+      fontSize: '13px', fontFamily: 'monospace', fontStyle: 'bold', color: '#fef08a'
     }).setOrigin(0.5);
 
-    const desc1 = this.add.text(t1X, t1Y + 46, 'Поход Кота (8-bit)', {
-      fontSize: '12px',
-      fontFamily: 'monospace',
-      color: '#94a3b8'
+    const desc1 = this.add.text(t1X, t1Y + 40, 'Поход (8-bit)', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#94a3b8'
     }).setOrigin(0.5);
 
-    this.track1BtnTxt = this.add.text(t1X, t1Y + 74, soundEngine.getSelectedTrack() === 'Wiklund' ? '▶ ИГРАЕТ' : '[ ВЫБРАТЬ ]', {
-      fontSize: '14px',
-      fontFamily: 'monospace',
-      fontStyle: 'bold',
+    this.track1BtnTxt = this.add.text(t1X, t1Y + 65, soundEngine.getSelectedTrack() === 'Wiklund' ? '▶ ИГРАЕТ' : '[ ВЫБРАТЬ ]', {
+      fontSize: '11px', fontFamily: 'monospace', fontStyle: 'bold',
       color: soundEngine.getSelectedTrack() === 'Wiklund' ? '#4ade80' : '#ffffff'
     }).setOrigin(0.5);
 
@@ -531,31 +542,24 @@ export class MainMenuScene extends Phaser.Scene {
     });
 
     // Track 2 Card: NEOWAVE
-    const t2X = 120;
+    const t2X = 0;
     const t2Y = -15;
-    this.track2CardBg = this.add.rectangle(t2X, t2Y, 200, 195, 0x1e293b)
+    this.track2CardBg = this.add.rectangle(t2X, t2Y, 155, 185, 0x1e293b)
       .setStrokeStyle(3, soundEngine.getSelectedTrack() === 'Neowave' ? 0x4ade80 : 0x475569)
       .setInteractive({ useHandCursor: true });
 
-    const pic2 = this.add.image(t2X, t2Y - 35, 'NeowavePic').setDisplaySize(96, 96);
+    const pic2 = this.add.image(t2X, t2Y - 35, 'NeowavePic').setDisplaySize(72, 72);
 
-    const name2 = this.add.text(t2X, t2Y + 28, 'NEOWAVE', {
-      fontSize: '16px',
-      fontFamily: 'monospace',
-      fontStyle: 'bold',
-      color: '#e0aaff'
+    const name2 = this.add.text(t2X, t2Y + 22, 'NEOWAVE', {
+      fontSize: '13px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e0aaff'
     }).setOrigin(0.5);
 
-    const desc2 = this.add.text(t2X, t2Y + 46, 'Замок Короля (Synth)', {
-      fontSize: '12px',
-      fontFamily: 'monospace',
-      color: '#94a3b8'
+    const desc2 = this.add.text(t2X, t2Y + 40, 'Замок (Synth)', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#94a3b8'
     }).setOrigin(0.5);
 
-    this.track2BtnTxt = this.add.text(t2X, t2Y + 74, soundEngine.getSelectedTrack() === 'Neowave' ? '▶ ИГРАЕТ' : '[ ВЫБРАТЬ ]', {
-      fontSize: '14px',
-      fontFamily: 'monospace',
-      fontStyle: 'bold',
+    this.track2BtnTxt = this.add.text(t2X, t2Y + 65, soundEngine.getSelectedTrack() === 'Neowave' ? '▶ ИГРАЕТ' : '[ ВЫБРАТЬ ]', {
+      fontSize: '11px', fontFamily: 'monospace', fontStyle: 'bold',
       color: soundEngine.getSelectedTrack() === 'Neowave' ? '#4ade80' : '#ffffff'
     }).setOrigin(0.5);
 
@@ -565,14 +569,39 @@ export class MainMenuScene extends Phaser.Scene {
       this.updateTrackSelectionUI();
     });
 
+    // Track 3 Card: VOID OVERLORD
+    const t3X = 170;
+    const t3Y = -15;
+    this.track3CardBg = this.add.rectangle(t3X, t3Y, 155, 185, 0x1e293b)
+      .setStrokeStyle(3, soundEngine.getSelectedTrack() === 'VoidOverlord' ? 0x4ade80 : 0x475569)
+      .setInteractive({ useHandCursor: true });
+
+    const pic3 = this.add.image(t3X, t3Y - 35, 'VoidOverlordPic').setDisplaySize(72, 72);
+
+    const name3 = this.add.text(t3X, t3Y + 22, 'ВЛАСТЕЛИН', {
+      fontSize: '13px', fontFamily: 'monospace', fontStyle: 'bold', color: '#c084fc'
+    }).setOrigin(0.5);
+
+    const desc3 = this.add.text(t3X, t3Y + 40, 'Экшен №3 (Techno)', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#94a3b8'
+    }).setOrigin(0.5);
+
+    this.track3BtnTxt = this.add.text(t3X, t3Y + 65, soundEngine.getSelectedTrack() === 'VoidOverlord' ? '▶ ИГРАЕТ' : '[ ВЫБРАТЬ ]', {
+      fontSize: '11px', fontFamily: 'monospace', fontStyle: 'bold',
+      color: soundEngine.getSelectedTrack() === 'VoidOverlord' ? '#4ade80' : '#ffffff'
+    }).setOrigin(0.5);
+
+    this.track3CardBg.on('pointerdown', () => {
+      soundEngine.playClick();
+      soundEngine.selectTrack('VoidOverlord');
+      this.updateTrackSelectionUI();
+    });
+
     // Back button from Music panel
     const musicBackBtn = this.add.rectangle(0, 138, 220, 38, 0x334155)
       .setInteractive({ useHandCursor: true });
     const musicBackTxt = this.add.text(0, 138, '< НАЗАД В НАСТРОЙКИ', {
-      fontSize: '15px',
-      fontFamily: 'monospace',
-      fontStyle: 'bold',
-      color: '#ffffff'
+      fontSize: '15px', fontFamily: 'monospace', fontStyle: 'bold', color: '#ffffff'
     }).setOrigin(0.5);
 
     musicBackBtn.on('pointerdown', () => {
@@ -583,10 +612,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // Corner close X
     const musicClose = this.add.text(230, -150, '[X]', {
-      fontSize: '18px',
-      fontFamily: 'monospace',
-      fontStyle: 'bold',
-      color: '#f87171'
+      fontSize: '18px', fontFamily: 'monospace', fontStyle: 'bold', color: '#f87171'
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     musicClose.on('pointerdown', () => {
@@ -596,10 +622,10 @@ export class MainMenuScene extends Phaser.Scene {
     });
 
     this.musicPanel.add([
-      musicBg,
-      musicTitle,
+      musicBg, musicTitle,
       this.track1CardBg, pic1, name1, desc1, this.track1BtnTxt,
       this.track2CardBg, pic2, name2, desc2, this.track2BtnTxt,
+      this.track3CardBg, pic3, name3, desc3, this.track3BtnTxt,
       musicBackBtn, musicBackTxt,
       musicClose
     ]);
@@ -609,10 +635,14 @@ export class MainMenuScene extends Phaser.Scene {
     const track = soundEngine.getSelectedTrack();
     this.track1CardBg.setStrokeStyle(3, track === 'Wiklund' ? 0x4ade80 : 0x475569);
     this.track2CardBg.setStrokeStyle(3, track === 'Neowave' ? 0x4ade80 : 0x475569);
+    this.track3CardBg.setStrokeStyle(3, track === 'VoidOverlord' ? 0x4ade80 : 0x475569);
+
     this.track1BtnTxt.setText(track === 'Wiklund' ? '▶ ИГРАЕТ' : '[ ВЫБРАТЬ ]')
       .setColor(track === 'Wiklund' ? '#4ade80' : '#ffffff');
     this.track2BtnTxt.setText(track === 'Neowave' ? '▶ ИГРАЕТ' : '[ ВЫБРАТЬ ]')
       .setColor(track === 'Neowave' ? '#4ade80' : '#ffffff');
+    this.track3BtnTxt.setText(track === 'VoidOverlord' ? '▶ ИГРАЕТ' : '[ ВЫБРАТЬ ]')
+      .setColor(track === 'VoidOverlord' ? '#4ade80' : '#ffffff');
   }
 
   private openMusicSelectionModal() {
@@ -623,27 +653,189 @@ export class MainMenuScene extends Phaser.Scene {
     this.musicPanel.setVisible(true);
   }
 
+  private buildProfilePanel() {
+    this.profilePanel = this.add.container(0, 0).setVisible(false);
+
+    let savedAvatar = localStorage.getItem('adv_avatar') || 'avatar_sq_1';
+    let savedFirstName = localStorage.getItem('adv_firstname') || 'Элрик';
+    let savedLastName = localStorage.getItem('adv_lastname') || 'Тенеход (Гром)';
+    let savedDob = localStorage.getItem('adv_dob') || '14.05.1242 г.';
+    let savedBio = localStorage.getItem('adv_bio') || 'Ветеран S-класса. Победитель 100 Боссов Подземелья.';
+
+    this.selectedAvatarKey = savedAvatar;
+
+    // Outer Profile Card Container
+    const cardBg = this.add.rectangle(0, -10, 500, 310, 0x0f172a).setStrokeStyle(3, 0x38bdf8);
+
+    // Title
+    const title = this.add.text(0, -148, '✦ КАРТОЧКА АВАНТЮРИСТА ✦', {
+      fontSize: '18px', fontFamily: 'monospace', fontStyle: 'bold', color: '#facc15'
+    }).setOrigin(0.5);
+
+    // TOP: Square Avatar Frame & Picture (80x80)
+    const avatarFrame = this.add.rectangle(-180, -70, 84, 84, 0x1e293b).setStrokeStyle(3, 0x4ade80);
+    this.profileAvatarImage = this.add.image(-180, -70, this.selectedAvatarKey).setDisplaySize(76, 76);
+
+    const changeAvatarBtn = this.add.text(-180, -18, '[ 📷 ИЗМЕНИТЬ ]', {
+      fontSize: '10px', fontFamily: 'monospace', fontStyle: 'bold', color: '#ffffff',
+      backgroundColor: '#16a34a', padding: { x: 6, y: 3 }
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    // Grid Popup for 7 Square Avatars Selection
+    const avatarPickerGrid = this.add.container(0, -10).setVisible(false);
+    const pickerBg = this.add.rectangle(0, 0, 480, 240, 0x020617, 0.95).setStrokeStyle(3, 0xfacc15).setInteractive();
+    const pickerTitle = this.add.text(0, -95, '✦ ВЫБЕРИТЕ КВАДРАТНУЮ АВАТАРКУ ✦', {
+      fontSize: '15px', fontFamily: 'monospace', fontStyle: 'bold', color: '#facc15'
+    }).setOrigin(0.5);
+
+    const sqAvatars = [
+      { key: 'avatar_sq_1', label: 'Гром' },
+      { key: 'avatar_sq_2', label: 'Заза' },
+      { key: 'avatar_sq_3', label: 'Бьёрн' },
+      { key: 'avatar_sq_4', label: 'Рыцарь' },
+      { key: 'avatar_sq_5', label: 'Маг' },
+      { key: 'avatar_sq_6', label: 'Следопыт' },
+      { key: 'avatar_sq_7', label: 'Проклятый' },
+      { key: 'avatar_sq_8', label: 'Властелин' }
+    ];
+
+    sqAvatars.forEach((av, idx) => {
+      const col = idx % 4;
+      const row = Math.floor(idx / 4);
+      const px = -150 + col * 100;
+      const py = -40 + row * 80;
+
+      const avBox = this.add.rectangle(px, py, 68, 68, 0x1e293b)
+        .setStrokeStyle(2, this.selectedAvatarKey === av.key ? 0x4ade80 : 0x475569)
+        .setInteractive({ useHandCursor: true });
+
+      const avImg = this.add.image(px, py - 6, av.key).setDisplaySize(54, 54);
+      const avTxt = this.add.text(px, py + 22, av.label, {
+        fontSize: '9px', fontFamily: 'monospace', fontStyle: 'bold', color: '#cbd5e1'
+      }).setOrigin(0.5);
+
+      avBox.on('pointerdown', () => {
+        soundEngine.playClick();
+        this.selectedAvatarKey = av.key;
+        localStorage.setItem('adv_avatar', av.key);
+        this.profileAvatarImage.setTexture(av.key);
+        avatarPickerGrid.setVisible(false);
+      });
+
+      avatarPickerGrid.add([avBox, avImg, avTxt]);
+    });
+
+    const pickerClose = this.add.text(0, 90, '[ ЗАКРЫТЬ ]', {
+      fontSize: '12px', fontFamily: 'monospace', fontStyle: 'bold', color: '#ffffff',
+      backgroundColor: '#ef4444', padding: { x: 12, y: 4 }
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    pickerClose.on('pointerdown', () => {
+      soundEngine.playClick();
+      avatarPickerGrid.setVisible(false);
+    });
+    avatarPickerGrid.add([pickerBg, pickerTitle, pickerClose]);
+
+    changeAvatarBtn.on('pointerdown', () => {
+      soundEngine.playClick();
+      avatarPickerGrid.setVisible(true);
+    });
+
+    // EDITABLE PROFILE FIELDS (Right of avatar & below avatar)
+    const firstNamesList = ['Элрик', 'Артур', 'Гарольд', 'Заза', 'Бьёрн', 'Леопард', 'Вальтер'];
+    const lastNamesList = ['Тенеход (Гром)', 'Безумный Варитель', 'Сокрушитель Скал', 'Легенда Гильдии', 'Одинокий Волшебник'];
+    const dobsList = ['14.05.1242 г.', '01.09.1238 г.', '28.11.1245 г.', '07.03.1240 г.', '19.08.1235 г.'];
+    const biosList = [
+      'Ветеран S-класса. Победитель 100 Боссов Подземелья.',
+      'Мастер ядов и защитных эликсиров подземного царства.',
+      'Северный берсерк с громовыми топорами и ледяным щитом.',
+      'Секретный агент Гильдии Исследователей Тёмных Пещер.',
+      'Великий рыцарь круглого стола Древней Крепости.'
+    ];
+
+    let fnIdx = firstNamesList.indexOf(savedFirstName); if (fnIdx < 0) fnIdx = 0;
+    let lnIdx = lastNamesList.indexOf(savedLastName); if (lnIdx < 0) lnIdx = 0;
+    let dobIdx = dobsList.indexOf(savedDob); if (dobIdx < 0) dobIdx = 0;
+    let bioIdx = biosList.indexOf(savedBio); if (bioIdx < 0) bioIdx = 0;
+
+    // Имя
+    const firstNameText = this.add.text(-120, -100, `ИМЯ: [ ${savedFirstName} ] ✏`, {
+      fontSize: '12px', fontFamily: 'monospace', fontStyle: 'bold', color: '#4ade80',
+      backgroundColor: '#1e293b', padding: { x: 8, y: 4 }
+    }).setInteractive({ useHandCursor: true });
+
+    firstNameText.on('pointerdown', () => {
+      soundEngine.playClick();
+      fnIdx = (fnIdx + 1) % firstNamesList.length;
+      savedFirstName = firstNamesList[fnIdx];
+      localStorage.setItem('adv_firstname', savedFirstName);
+      firstNameText.setText(`ИМЯ: [ ${savedFirstName} ] ✏`);
+    });
+
+    // Фамилия
+    const lastNameText = this.add.text(-120, -68, `ФАМИЛИЯ: [ ${savedLastName} ] ✏`, {
+      fontSize: '12px', fontFamily: 'monospace', fontStyle: 'bold', color: '#38bdf8',
+      backgroundColor: '#1e293b', padding: { x: 8, y: 4 }
+    }).setInteractive({ useHandCursor: true });
+
+    lastNameText.on('pointerdown', () => {
+      soundEngine.playClick();
+      lnIdx = (lnIdx + 1) % lastNamesList.length;
+      savedLastName = lastNamesList[lnIdx];
+      localStorage.setItem('adv_lastname', savedLastName);
+      lastNameText.setText(`ФАМИЛИЯ: [ ${savedLastName} ] ✏`);
+    });
+
+    // Дата рождения
+    const dobText = this.add.text(-120, -36, `ДАТА РОЖДЕНИЯ: [ ${savedDob} ] ✏`, {
+      fontSize: '11px', fontFamily: 'monospace', fontStyle: 'bold', color: '#fef08a',
+      backgroundColor: '#1e293b', padding: { x: 8, y: 4 }
+    }).setInteractive({ useHandCursor: true });
+
+    dobText.on('pointerdown', () => {
+      soundEngine.playClick();
+      dobIdx = (dobIdx + 1) % dobsList.length;
+      savedDob = dobsList[dobIdx];
+      localStorage.setItem('adv_dob', savedDob);
+      dobText.setText(`ДАТА РОЖДЕНИЯ: [ ${savedDob} ] ✏`);
+    });
+
+    // Описание
+    const bioTitle = this.add.text(-220, 10, 'ОПИСАНИЕ И ЛОР ГЕРОЯ: [ КЛИКНИТЕ ДЛЯ СМЕНЫ ✏ ]', {
+      fontSize: '10px', fontFamily: 'monospace', fontStyle: 'bold', color: '#cbd5e1'
+    });
+
+    const bioBox = this.add.rectangle(0, 60, 440, 75, 0x1e293b).setStrokeStyle(2, 0x475569).setInteractive({ useHandCursor: true });
+    const bioText = this.add.text(-210, 32, savedBio, {
+      fontSize: '11px', fontFamily: 'monospace', color: '#e2e8f0',
+      wordWrap: { width: 420 }, lineSpacing: 4
+    });
+
+    const cycleBio = () => {
+      soundEngine.playClick();
+      bioIdx = (bioIdx + 1) % biosList.length;
+      savedBio = biosList[bioIdx];
+      localStorage.setItem('adv_bio', savedBio);
+      bioText.setText(savedBio);
+    };
+
+    bioBox.on('pointerdown', cycleBio);
+
+    this.profilePanel.add([
+      cardBg, title,
+      avatarFrame, this.profileAvatarImage, changeAvatarBtn,
+      firstNameText, lastNameText, dobText,
+      bioTitle, bioBox, bioText,
+      avatarPickerGrid
+    ]);
+  }
+
   private showProfilePopup() {
-    this.musicPanel.setVisible(false);
-    this.hideSettingsElements();
-    this.popupTitle.setText('ПРОФИЛЬ БОЙЦА').setVisible(true);
-
-    const savedRank = localStorage.getItem('fb_rank_points') || '1450';
-    const profileInfo =
-      '═══ СТАТИСТИКА БОЕВ ═══\n\n' +
-      'Побед в боях: 12\n' +
-      'Сражено противников: 45\n' +
-      'Ранг: [ ЗОЛОТОЙ ВОИН ]\n' +
-      `Рейтинговые очки: ${savedRank} / 1500 pts\n` +
-      'Любимый боец: ZAZA (Эпический)\n\n' +
-      'Управляй героями у Алтаря в Хабе!';
-
-    this.popupContentText.setText(profileInfo).setVisible(true);
-    this.popupContainer.setVisible(true);
+    this.game.events.emit('open-profile-modal');
   }
 
   private showSettingsPopup() {
     this.musicPanel.setVisible(false);
+    if (this.profilePanel) this.profilePanel.setVisible(false);
     this.popupContentText.setVisible(false);
     this.popupTitle.setText('НАСТРОЙКИ').setVisible(true);
     this.tabSoundsBtn.setVisible(true);
@@ -689,10 +881,12 @@ export class MainMenuScene extends Phaser.Scene {
   private startGame() {
     soundEngine.playLevelUp();
     const targetX = this.ruinsContainer.x + this.caveEntrance.x * this.ruinsContainer.scaleX;
-    const targetY = this.ruinsContainer.y + this.caveEntrance.y * this.ruinsContainer.scaleY;
+    const targetY = this.ruinsContainer.y + (this.caveEntrance.y + 10) * this.ruinsContainer.scaleY;
 
-    this.cameras.main.pan(targetX, targetY, 400, 'Sine.easeIn');
-    this.cameras.main.fadeOut(450, 0, 0, 0);
+    // Cinematic zoom & pan flying straight inside the dark emerald cave
+    this.cameras.main.pan(targetX, targetY, 700, 'Quad.easeInOut');
+    this.cameras.main.zoomTo(3.5, 700, 'Quad.easeIn');
+    this.cameras.main.fadeOut(750, 0, 0, 0);
 
     let started = false;
     const proceedToHub = () => {
@@ -702,7 +896,7 @@ export class MainMenuScene extends Phaser.Scene {
     };
 
     this.cameras.main.once('camerafadeoutcomplete', proceedToHub);
-    this.time.delayedCall(500, proceedToHub);
+    this.time.delayedCall(800, proceedToHub);
   }
 
   private handleResize(gameSize: Phaser.Structs.Size) {

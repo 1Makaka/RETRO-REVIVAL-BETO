@@ -17,6 +17,7 @@ export class HubScene extends Phaser.Scene {
   private playerHp = 1000;
   private playerMaxHp = 1000;
   private playerSpeed = 290;
+  private playerWeaponVisual!: Phaser.GameObjects.Image;
 
   // HP Bar & combat
   private hpBarBg!: Phaser.GameObjects.Rectangle;
@@ -35,17 +36,24 @@ export class HubScene extends Phaser.Scene {
   private currentInteractable: { x: number; y: number; text: string; action: 'altar' | 'gate' | 'shop' } | null = null;
   private interactPromptUI!: Phaser.GameObjects.Text;
 
-  // Minimap
-  private minimapCamera!: Phaser.Cameras.Scene2D.Camera;
-  private minimapBorder!: Phaser.GameObjects.Graphics;
+  // Minimap (Radar style)
+  private minimapContainer!: Phaser.GameObjects.Container;
+  private minimapGfx!: Phaser.GameObjects.Graphics;
+  private minimapIcons: Phaser.GameObjects.Text[] = [];
 
-  // Mobile Controls (Native Virtual Joystick)
+  // Mobile Controls & Red Aim Joystick
   private isPC = false;
   private joyStickBase!: Phaser.GameObjects.Arc;
   private joyStickThumb!: Phaser.GameObjects.Arc;
   private joyStickPointerId: number | null = null;
   private joyStickVector = new Phaser.Math.Vector2(0, 0);
   private joyStickOrigin = new Phaser.Math.Vector2(0, 0);
+
+  private aimJoyBase!: Phaser.GameObjects.Arc;
+  private aimJoyThumb!: Phaser.GameObjects.Arc;
+  private aimJoyPointerId: number | null = null;
+  private aimJoyVector = new Phaser.Math.Vector2(0, 0);
+  private aimLineGfx!: Phaser.GameObjects.Graphics;
 
   // Combat buttons
   private combatElements: Phaser.GameObjects.GameObject[] = [];
@@ -90,27 +98,43 @@ export class HubScene extends Phaser.Scene {
   private rosterGroup: Phaser.GameObjects.GameObject[] = [];
   private rosterCards: Array<{
     bg: Phaser.GameObjects.Rectangle;
+    banner: Phaser.GameObjects.Rectangle;
     portrait: Phaser.GameObjects.Image;
-    key: string;
+    nameText: Phaser.GameObjects.Text;
+    rarityText: Phaser.GameObjects.Text;
+    statsText: Phaser.GameObjects.Text;
     statusText: Phaser.GameObjects.Text;
+    key: string;
   }> = [];
 
   // View 2 (Detail View)
   private detailGroup: Phaser.GameObjects.GameObject[] = [];
+  private detailPedestalOuter!: Phaser.GameObjects.Ellipse;
+  private detailPedestal!: Phaser.GameObjects.Ellipse;
   private detailHeroSprite!: Phaser.GameObjects.Image;
   private detailHeroName!: Phaser.GameObjects.Text;
-  private detailSkillButtons: Array<{
+  private detailHeroRarityBadgeBg!: Phaser.GameObjects.Rectangle;
+  private detailHeroRarity!: Phaser.GameObjects.Text;
+  private detailHeroTitleBoxBg!: Phaser.GameObjects.Rectangle;
+  private detailHeroTitle!: Phaser.GameObjects.Text;
+  private detailHeroAttackBoxBg!: Phaser.GameObjects.Rectangle;
+  private detailHeroAttackDesc!: Phaser.GameObjects.Text;
+  private detailHeroStatsBoxBg!: Phaser.GameObjects.Rectangle;
+  private detailHeroStats!: Phaser.GameObjects.Text;
+  private detailSkillSquareButtons: Array<{
     bg: Phaser.GameObjects.Rectangle;
     icon: Phaser.GameObjects.Image;
     label: Phaser.GameObjects.Text;
   }> = [];
-  private detailCardBox!: Phaser.GameObjects.Rectangle;
+  private detailSkillNameBoxBg!: Phaser.GameObjects.Rectangle;
   private detailSkillTitle!: Phaser.GameObjects.Text;
+  private detailSkillCdBoxBg!: Phaser.GameObjects.Rectangle;
   private detailSkillMeta!: Phaser.GameObjects.Text;
+  private detailSkillDescBox!: Phaser.GameObjects.Rectangle;
   private detailSkillDesc!: Phaser.GameObjects.Text;
   private detailSelectBtn!: Phaser.GameObjects.Rectangle;
   private detailSelectText!: Phaser.GameObjects.Text;
-  private currentDetailSkillIndex = 0;
+  private currentDetailSkillIndex: number = 0;
 
   // --- MATCHMAKING & LOBBY MODAL (Flat Scene GameObjects for 100% reliable clicks) ---
   private isLobbyOpen = false;
@@ -169,7 +193,7 @@ export class HubScene extends Phaser.Scene {
     const height = this.cameras.main.height;
 
     // Reset camera & state cleanly
-    this.cameras.main.setZoom(1);
+    this.cameras.main.setZoom(0.95);
     this.cameras.main.resetFX();
     this.cameras.main.fadeIn(400, 0, 0, 0);
 
@@ -267,6 +291,11 @@ export class HubScene extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.walls);
 
+    let initWeaponTex = 'weapon_stick';
+    if (this.selectedHeroKey === 'char_grim') initWeaponTex = 'weapon_flask_launcher';
+    else if (this.selectedHeroKey === 'char_bjorn') initWeaponTex = 'weapon_battleaxe';
+    this.playerWeaponVisual = this.add.image(this.player.x, this.player.y, initWeaponTex).setDepth(51);
+
     // Overhead HP Bar
     this.hpBarBg = this.add.rectangle(0, 0, 48, 7, 0x000000).setDepth(150);
     this.hpBarFill = this.add.rectangle(0, 0, 46, 5, 0x22c55e).setOrigin(0, 0.5).setDepth(150);
@@ -345,32 +374,6 @@ export class HubScene extends Phaser.Scene {
     this.buildHeroAltarModal(width, height);
     this.buildLobbyGateModal(width, height);
 
-    if (this.minimapCamera) {
-      const uiToIgnore: Phaser.GameObjects.GameObject[] = [
-        this.heroOverlay,
-        this.altarBg,
-        ...(this.rosterGroup || []),
-        ...(this.detailGroup || []),
-        ...(this.lobbyBaseGroup || []),
-        ...(this.portalRootGroup || []),
-        ...(this.pvpModesGroup || []),
-        ...(this.dungeonModesGroup || []),
-        ...(this.dungeonOnlineChoiceGroup || []),
-        ...(this.dungeonCreateGroup || []),
-        ...(this.dungeonServersGroup || []),
-        ...(this.rankedGroup || []),
-        ...(this.casualGroup || []),
-        ...(this.searchGroup || []),
-        this.interactPromptUI,
-        this.joyStickBase,
-        this.joyStickThumb,
-        exitBtn,
-        fsBtn,
-        ...(this.combatElements || [])
-      ].filter(Boolean);
-      this.minimapCamera.ignore(uiToIgnore);
-    }
-
     // Post-update: keep overhead health bars & active attack weapons synced
     this.events.on('postupdate', () => {
       this.hpBarBg.setPosition(this.player.x, this.player.y - 42);
@@ -385,30 +388,60 @@ export class HubScene extends Phaser.Scene {
         this.player.angle = this.activeAxe.angle;
       }
     });
-
-    // Resize listener
-    this.scale.on('resize', this.handleResize, this);
   }
 
-  // --- MINIMAP ---
+  // --- MINIMAP (SQUARE RADAR HUD) ---
   private createMinimap(width: number) {
-    const miniRadius = 54;
-    const miniX = width - miniRadius - 20;
-    const miniY = miniRadius + 20;
+    const size = 110;
+    const miniX = width - size / 2 - 20;
+    const miniY = size / 2 + 20;
 
-    this.minimapCamera = this.cameras.add(miniX - miniRadius, miniY - miniRadius, miniRadius * 2, miniRadius * 2)
-      .setZoom(0.12)
-      .setName('minimap');
-    this.minimapCamera.setBackgroundColor(0x09100d);
-    this.minimapCamera.startFollow(this.player);
+    this.minimapContainer = this.add.container(miniX, miniY).setScrollFactor(0).setDepth(290);
+    const bgOuter = this.add.rectangle(0, 0, size + 6, size + 6, 0x0f172a, 0.95).setStrokeStyle(3, 0x38bdf8);
+    const bgInner = this.add.rectangle(0, 0, size, size, 0x050a0e, 0.95);
+    this.minimapGfx = this.add.graphics();
 
-    const maskGfx = this.make.graphics({});
-    maskGfx.fillCircle(miniX, miniY, miniRadius);
-    this.minimapCamera.setMask(maskGfx.createGeometryMask());
+    this.minimapContainer.add([bgOuter, bgInner, this.minimapGfx]);
+    this.updateMinimapRadar();
+  }
 
-    this.minimapBorder = this.add.graphics().setScrollFactor(0).setDepth(299);
-    this.minimapBorder.lineStyle(3, 0x4ade80);
-    this.minimapBorder.strokeCircle(miniX, miniY, miniRadius);
+  private updateMinimapRadar() {
+    if (!this.minimapGfx || !this.player) return;
+    this.minimapGfx.clear();
+
+    // Radar grid lines
+    this.minimapGfx.lineStyle(1, 0x1e293b, 0.6);
+    this.minimapGfx.lineBetween(-50, 0, 50, 0);
+    this.minimapGfx.lineBetween(0, -50, 0, 50);
+
+    const mapW = 2000;
+    const mapH = 2000;
+    const miniRadius = 52;
+    const scale = 0.055;
+
+    // POIs: Altar, Gate, Shop, Dummies
+    const pois = [
+      { x: mapW / 2, y: mapH / 2, color: 0xfacc15 },
+      { x: mapW / 2, y: 280, color: 0xef4444 },
+      { x: mapW / 2 + 500, y: mapH / 2, color: 0x38bdf8 },
+      { x: mapW / 2 - 450, y: mapH / 2, color: 0xa855f7 },
+    ];
+
+    pois.forEach(p => {
+      const dx = (p.x - this.player.x) * scale;
+      const dy = (p.y - this.player.y) * scale;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist <= miniRadius - 6) {
+        this.minimapGfx.fillStyle(p.color, 0.95);
+        this.minimapGfx.fillCircle(dx, dy, 4);
+      }
+    });
+
+    // Player indicator in center (Emerald)
+    this.minimapGfx.fillStyle(0x22c55e, 1.0);
+    this.minimapGfx.fillCircle(0, 0, 5);
+    this.minimapGfx.lineStyle(2, 0x86efac, 1.0);
+    this.minimapGfx.strokeCircle(0, 0, 5);
   }
 
   // --- CONTROLS SETUP ---
@@ -443,18 +476,24 @@ export class HubScene extends Phaser.Scene {
     this.joyStickBase.setVisible(!this.isPC);
     this.joyStickThumb.setVisible(!this.isPC);
 
-    // Multi-touch tracking for joystick on left side of screen
+    // Multi-touch tracking for joystick on left side and aim joystick on right side of screen
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.isHeroMenuOpen || this.isLobbyOpen) return;
       if (pointer.x < width * 0.42 && pointer.y > height * 0.4) {
         this.joyStickPointerId = pointer.id;
         this.updateJoystick(pointer);
+      } else if (pointer.x > width * 0.52 && pointer.y > height * 0.35) {
+        this.aimJoyPointerId = pointer.id;
+        this.updateAimJoystick(pointer.x, pointer.y);
       }
     });
 
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       if (pointer.id === this.joyStickPointerId) {
         this.updateJoystick(pointer);
+      }
+      if (pointer.id === this.aimJoyPointerId) {
+        this.updateAimJoystick(pointer.x, pointer.y);
       }
     });
 
@@ -463,6 +502,13 @@ export class HubScene extends Phaser.Scene {
         this.joyStickPointerId = null;
         this.joyStickVector.set(0, 0);
         this.joyStickThumb.setPosition(this.joyStickOrigin.x, this.joyStickOrigin.y);
+      }
+      if (pointer.id === this.aimJoyPointerId) {
+        this.aimJoyPointerId = null;
+        if (this.aimJoyBase) this.aimJoyThumb.setPosition(this.aimJoyBase.x, this.aimJoyBase.y);
+        this.aimJoyVector.set(0, 0);
+        if (this.aimLineGfx) this.aimLineGfx.clear();
+        this.executeSkill('attack');
       }
     });
   }
@@ -488,13 +534,31 @@ export class HubScene extends Phaser.Scene {
     }
   }
 
+  private updateAimJoystick(px: number, py: number) {
+    if (!this.aimJoyBase) return;
+    const baseX = this.aimJoyBase.x;
+    const baseY = this.aimJoyBase.y;
+
+    const dx = px - baseX;
+    const dy = py - baseY;
+    const angle = Math.atan2(dy, dx);
+    const dist = Math.min(45, Math.sqrt(dx * dx + dy * dy));
+
+    this.aimJoyThumb.setPosition(baseX + Math.cos(angle) * dist, baseY + Math.sin(angle) * dist);
+    this.aimJoyVector.set(Math.cos(angle), Math.sin(angle));
+
+    if (Math.cos(angle) !== 0) {
+      this.player.setFlipX(Math.cos(angle) < 0);
+    }
+  }
+
   // --- COMBAT UI ---
   private setupCombatUI(width: number, height: number) {
-    // Attack Button (Large, prominent)
+    // Attack Button & Red Aim Joystick (Large, prominent)
     this.btnAttack = this.add.circle(0, 0, 56, 0xdc2626, 0.9)
       .setScrollFactor(0).setDepth(300).setStrokeStyle(3, 0xfca5a5).setInteractive();
-    this.txtAttack = this.add.text(0, 0, 'АТАКА\n[SPACE]', {
-      fontSize: '13px',
+    this.txtAttack = this.add.text(0, 0, 'ПРИЦЕЛ/АТАКА\n[SPACE]', {
+      fontSize: '10px',
       fontFamily: 'monospace',
       fontStyle: 'bold',
       color: '#ffffff',
@@ -502,6 +566,12 @@ export class HubScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
     this.cdAttackOverlay = this.add.circle(0, 0, 56, 0x000000, 0.65)
       .setScrollFactor(0).setDepth(302).setVisible(false);
+
+    this.aimJoyBase = this.add.circle(0, 0, 52, 0xdc2626, 0.35)
+      .setScrollFactor(0).setDepth(299).setStrokeStyle(3, 0xef4444);
+    this.aimJoyThumb = this.add.circle(0, 0, 26, 0xef4444, 0.9)
+      .setScrollFactor(0).setDepth(300);
+    this.aimLineGfx = this.add.graphics().setDepth(298);
 
     this.btnAttack.on('pointerdown', (_p: unknown, _lx: unknown, _ly: unknown, event: { stopPropagation: () => void }) => {
       event.stopPropagation();
@@ -578,6 +648,9 @@ export class HubScene extends Phaser.Scene {
       this.txtAttack.setPosition(cx, cy).setScale(btnScale);
       this.cdAttackOverlay.setPosition(cx, cy).setScale(btnScale);
 
+      if (this.aimJoyBase) this.aimJoyBase.setPosition(cx, cy).setScale(btnScale);
+      if (this.aimJoyThumb && this.aimJoyPointerId === null) this.aimJoyThumb.setPosition(cx, cy).setScale(btnScale);
+
       this.btnS1.setPosition(s1X, s1Y).setScale(btnScale);
       this.iconS1.setPosition(s1X, s1Y).setScale(btnScale);
       this.cdS1Overlay.setPosition(s1X, s1Y).setScale(btnScale);
@@ -618,26 +691,26 @@ export class HubScene extends Phaser.Scene {
       event.stopPropagation();
     });
 
-    // Main Modal Frame (Landscape 760 x 460)
-    this.altarBg = this.add.rectangle(cx, cy, 760, 460, 0x111827)
-      .setStrokeStyle(4, 0x38bdf8)
+    // Main Modal Frame (670 x 430 with luxury warm amber/gold border & obsidian background)
+    this.altarBg = this.add.rectangle(cx, cy, 670, 430, 0x0f1422)
+      .setStrokeStyle(3, 0xf59e0b)
       .setScrollFactor(0).setDepth(501).setVisible(false);
 
     // ==========================================
-    // 1. ROSTER VIEW (PIXEL CHARACTERS ONLY)
+    // 1. ROSTER VIEW (COMPACT PIXEL CARDS)
     // ==========================================
-    const rosterTitle = this.add.text(cx, cy - 185, '✦ ВЫБОР БОЙЦА ✦', {
-      fontSize: '22px',
+    const rosterTitle = this.add.text(cx, cy - 180, '✦ ВЫБОР ГЕРОЯ ✦', {
+      fontSize: '18px',
       fontFamily: 'monospace',
       fontStyle: 'bold',
-      color: '#f0f9ff'
+      color: '#facc15'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(502).setVisible(false);
 
-    const rosterCloseBtn = this.add.text(cx + 345, cy - 188, '[X]', {
-      fontSize: '22px',
+    const rosterCloseBtn = this.add.text(cx + 305, cy - 180, '[X]', {
+      fontSize: '18px',
       fontFamily: 'monospace',
       fontStyle: 'bold',
-      color: '#f87171'
+      color: '#ef4444'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(502).setInteractive({ useHandCursor: true }).setVisible(false);
 
     rosterCloseBtn.on('pointerdown', () => {
@@ -649,45 +722,68 @@ export class HubScene extends Phaser.Scene {
     this.rosterCards = [];
 
     const heroKeys = ['char_zaza', 'char_grim', 'char_bjorn'];
-    const cardOffsets = [-225, 0, 225];
+    const cardOffsets = [-195, 0, 195];
 
     heroKeys.forEach((key, idx) => {
       const hero = HEROES[key];
       const cardX = cx + cardOffsets[idx];
-      const cardY = cy + 22;
+      const cardY = cy + 18;
 
-      const cardBg = this.add.rectangle(cardX, cardY, 210, 280, 0x1f2937)
-        .setStrokeStyle(3, hero.color)
+      // Card Background
+      const cardBg = this.add.rectangle(cardX, cardY, 170, 245, 0x181c2b)
+        .setStrokeStyle(2, hero.color)
         .setScrollFactor(0).setDepth(502).setInteractive({ useHandCursor: true }).setVisible(false);
 
-      // Authentic pixel art character standing on altar
-      const charSprite = this.add.image(cardX, cardY - 45, hero.texture)
-        .setScale(2.5).setScrollFactor(0).setDepth(503).setInteractive({ useHandCursor: true }).setVisible(false);
+      // Top Rarity Banner
+      const cardBanner = this.add.rectangle(cardX, cardY - 102, 168, 24, 0x0b0f19)
+        .setStrokeStyle(1, hero.color)
+        .setScrollFactor(0).setDepth(503).setVisible(false);
 
-      this.tweens.add({
-        targets: charSprite,
-        y: '-=6',
-        duration: 750 + idx * 80,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
+      const rarityText = this.add.text(cardX, cardY - 102, `[ ${hero.rarity} ]`, {
+        fontSize: '10px',
+        fontFamily: 'monospace',
+        fontStyle: 'bold',
+        color: hero.colorHex
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(504).setVisible(false);
 
-      const name = this.add.text(cardX, cardY + 45, hero.name, {
-        fontSize: '18px',
+      // Double Concentric Stand Pedestals under character's feet
+      const charPedestalOuter = this.add.ellipse(cardX, cardY - 12, 76, 22, 0x090d16)
+        .setStrokeStyle(2, hero.color)
+        .setScrollFactor(0).setDepth(503).setVisible(false);
+
+      const charPedestalInner = this.add.ellipse(cardX, cardY - 12, 56, 14, 0x1e293b)
+        .setStrokeStyle(1, 0x38bdf8)
+        .setScrollFactor(0).setDepth(503).setVisible(false);
+
+      // Pixel Sprite (Reduced size to 1.8, perfectly stationary, NO MOVING / TWEENS)
+      const charSprite = this.add.image(cardX, cardY - 42, hero.texture)
+        .setScale(1.8).setScrollFactor(0).setDepth(504).setInteractive({ useHandCursor: true }).setVisible(false);
+
+      // Name & Clean Subtitle
+      const displayName = key === 'char_zaza' ? 'ZAZA' : (key === 'char_grim' ? 'ГРИМ' : 'БЬОРН');
+      const nameText = this.add.text(cardX, cardY + 28, displayName, {
+        fontSize: '16px',
         fontFamily: 'monospace',
         fontStyle: 'bold',
         color: '#ffffff'
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setInteractive({ useHandCursor: true }).setVisible(false);
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(504).setInteractive({ useHandCursor: true }).setVisible(false);
 
-      const statusText = this.add.text(cardX, cardY + 95, key === this.selectedHeroKey ? '[ ТЕКУЩИЙ ✓ ]' : '[ ВЫБРАТЬ ]', {
-        fontSize: '14px',
+      const statsText = this.add.text(cardX, cardY + 50, `HP ${hero.hp} • СПД ${hero.speed}`, {
+        fontSize: '10px',
+        fontFamily: 'monospace',
+        color: '#94a3b8'
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(504).setVisible(false);
+
+      // Status indicator on card (Only shows equipped badge, NO "ВЫБРАТЬ" text)
+      const isEquipped = key === this.selectedHeroKey;
+      const statusText = this.add.text(cardX, cardY + 84, isEquipped ? '[ ТЕКУЩИЙ ✓ ]' : '', {
+        fontSize: '11px',
         fontFamily: 'monospace',
         fontStyle: 'bold',
-        color: key === this.selectedHeroKey ? '#4ade80' : '#38bdf8',
-        backgroundColor: '#111827',
-        padding: { x: 14, y: 6 }
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setInteractive({ useHandCursor: true }).setVisible(false);
+        color: '#4ade80',
+        backgroundColor: '#064e3b',
+        padding: { x: 8, y: 4 }
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(504).setVisible(false);
 
       const onCardClick = () => {
         soundEngine.playClick();
@@ -696,28 +792,30 @@ export class HubScene extends Phaser.Scene {
 
       cardBg.on('pointerdown', onCardClick);
       charSprite.on('pointerdown', onCardClick);
-      name.on('pointerdown', onCardClick);
-      statusText.on('pointerdown', onCardClick);
+      nameText.on('pointerdown', onCardClick);
 
-      cardBg.on('pointerover', () => cardBg.setStrokeStyle(3, 0xfef08a));
-      cardBg.on('pointerout', () => cardBg.setStrokeStyle(3, hero.color));
+      cardBg.on('pointerover', () => cardBg.setStrokeStyle(2, 0xfacc15));
+      cardBg.on('pointerout', () => cardBg.setStrokeStyle(2, hero.color));
 
-      this.rosterCards.push({ bg: cardBg, portrait: charSprite, key, statusText });
-      this.rosterGroup.push(cardBg, charSprite, name, statusText);
+      this.rosterCards.push({ bg: cardBg, banner: cardBanner, portrait: charSprite, nameText, rarityText, statsText, statusText, key });
+      this.rosterGroup.push(cardBg, cardBanner, rarityText, charPedestalOuter, charPedestalInner, charSprite, nameText, statsText, statusText);
     });
 
     // =========================================================================
     // 2. DETAIL VIEW:
-    //    LEFT: Hero Showcase (Standing Sprite, Name, [ ВЫБРАТЬ ЭТОГО БОЙЦА ])
-    //    RIGHT: 3 SKILL BUTTONS ON TOP-RIGHT + CLEAN DESCRIPTION BOX
+    //    TOP-LEFT: Hero Name & Subtitle & Attack & Stats Boxes
+    //    CENTER: Hero Sprite on Pedestal (STATIONARY, NO MOVING)
+    //    TOP-RIGHT: 3 SEPARATE BOXES (Skill Name Box, CD Box, Skill Desc Box)
+    //    RIGHT COLUMN: 3 Skill Buttons
+    //    BOTTOM-RIGHT: [ ВЫБРАТЬ ЭТОГО БОЙЦА ] Button
     // =========================================================================
-    const detailBackBtn = this.add.text(cx - 240, cy - 195, '< К СПИСКУ ГЕРОЕВ', {
-      fontSize: '14px',
+    const detailBackBtn = this.add.text(cx - 290, cy - 180, '< НАЗАД', {
+      fontSize: '12px',
       fontFamily: 'monospace',
       fontStyle: 'bold',
       color: '#facc15',
-      backgroundColor: '#1f2937',
-      padding: { x: 12, y: 6 }
+      backgroundColor: '#1e2230',
+      padding: { x: 8, y: 4 }
     }).setOrigin(0.5).setScrollFactor(0).setDepth(502).setInteractive({ useHandCursor: true }).setVisible(false);
 
     detailBackBtn.on('pointerdown', () => {
@@ -725,11 +823,11 @@ export class HubScene extends Phaser.Scene {
       this.showRosterView();
     });
 
-    const detailCloseBtn = this.add.text(cx + 345, cy - 195, '[X]', {
-      fontSize: '22px',
+    const detailCloseBtn = this.add.text(cx + 305, cy - 180, '[X]', {
+      fontSize: '18px',
       fontFamily: 'monospace',
       fontStyle: 'bold',
-      color: '#f87171'
+      color: '#ef4444'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(502).setInteractive({ useHandCursor: true }).setVisible(false);
 
     detailCloseBtn.on('pointerdown', () => {
@@ -737,34 +835,154 @@ export class HubScene extends Phaser.Scene {
       this.closeHeroMenu();
     });
 
-    // Left Column: Hero Showcase
-    const heroLeftX = cx - 180;
-
-    this.detailHeroSprite = this.add.image(heroLeftX, cy - 35, 'char_zaza')
-      .setScale(3.2).setScrollFactor(0).setDepth(503).setVisible(false);
-
-    this.tweens.add({
-      targets: this.detailHeroSprite,
-      y: '-=8',
-      duration: 850,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
-
-    this.detailHeroName = this.add.text(heroLeftX, cy + 80, 'ZAZA', {
-      fontSize: '24px',
+    // 1. LEFT COLUMN: Name, Rarity Badge, Title, Attack & Stats
+    const leftX = cx - 215;
+    this.detailHeroName = this.add.text(leftX, cy - 135, 'ZAZA', {
+      fontSize: '22px',
       fontFamily: 'monospace',
       fontStyle: 'bold',
       color: '#ffffff'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setVisible(false);
 
-    this.detailSelectBtn = this.add.rectangle(heroLeftX, cy + 140, 260, 48, 0x16a34a)
-      .setStrokeStyle(3, 0x86efac)
+    this.detailHeroRarityBadgeBg = this.add.rectangle(leftX, cy - 106, 130, 22, 0x2e1065)
+      .setStrokeStyle(1, 0xa855f7)
+      .setScrollFactor(0).setDepth(503).setVisible(false);
+
+    this.detailHeroRarity = this.add.text(leftX, cy - 106, '[ ЭПИЧЕСКИЙ ]', {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+      color: '#c084fc'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(504).setVisible(false);
+
+    this.detailHeroTitleBoxBg = this.add.rectangle(leftX, cy - 76, 165, 24, 0x181c2b)
+      .setStrokeStyle(1, 0x3f3f46)
+      .setScrollFactor(0).setDepth(502).setVisible(false);
+
+    this.detailHeroTitle = this.add.text(leftX, cy - 76, 'Токсичный Мутант', {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+      color: '#e2e8f0'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setVisible(false);
+
+    this.detailHeroAttackBoxBg = this.add.rectangle(leftX, cy - 30, 165, 44, 0x181c2b)
+      .setStrokeStyle(1, 0x3f3f46)
+      .setScrollFactor(0).setDepth(502).setVisible(false);
+
+    this.detailHeroAttackDesc = this.add.text(leftX - 74, cy - 44, '⚔ Атака: Удар в ближнем бою.', {
+      fontSize: '9px',
+      fontFamily: 'monospace',
+      color: '#94a3b8',
+      wordWrap: { width: 150 },
+      lineSpacing: 2
+    }).setOrigin(0, 0).setScrollFactor(0).setDepth(503).setVisible(false);
+
+    this.detailHeroStatsBoxBg = this.add.rectangle(leftX, cy + 22, 165, 34, 0x090d16)
+      .setStrokeStyle(1, 0x22c55e)
+      .setScrollFactor(0).setDepth(502).setVisible(false);
+
+    this.detailHeroStats = this.add.text(leftX, cy + 22, '❤ HP: 1000   ⚡ СПД: 290', {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+      color: '#4ade80'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setVisible(false);
+
+    // 2. CENTER: Glowing Circular Pedestal + Stationary Hero (NO MOVING BACK AND FORTH)
+    const heroCenterX = cx - 10;
+    this.detailPedestalOuter = this.add.ellipse(heroCenterX, cy + 62, 145, 42, 0x0f172a)
+      .setStrokeStyle(3, 0xf59e0b)
+      .setScrollFactor(0).setDepth(502).setVisible(false);
+
+    this.detailPedestal = this.add.ellipse(heroCenterX, cy + 62, 125, 32, 0x181a26)
+      .setStrokeStyle(2, 0x38bdf8)
+      .setScrollFactor(0).setDepth(502).setVisible(false);
+
+    this.detailHeroSprite = this.add.image(heroCenterX, cy - 12, 'char_zaza')
+      .setScale(3.0).setScrollFactor(0).setDepth(503).setVisible(false);
+
+    // 3. TOP-RIGHT: 3 DISTINCT SEPARATE BOXES (Skill Name, CD, Description)
+    const rightColX = cx + 205;
+
+    // Separate Box 1: Skill Name Box
+    this.detailSkillNameBoxBg = this.add.rectangle(rightColX - 32, cy - 134, 140, 28, 0x181c2b)
+      .setStrokeStyle(2, 0xfacc15)
+      .setScrollFactor(0).setDepth(502).setVisible(false);
+
+    this.detailSkillTitle = this.add.text(rightColX - 32, cy - 134, '1. ПЛЕВОК ЯДОМ', {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+      color: '#facc15'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setVisible(false);
+
+    // Separate Box 2: Skill Cooldown (CD) Badge Box
+    this.detailSkillCdBoxBg = this.add.rectangle(rightColX + 70, cy - 134, 52, 28, 0x064e3b)
+      .setStrokeStyle(2, 0x22c55e)
+      .setScrollFactor(0).setDepth(502).setVisible(false);
+
+    this.detailSkillMeta = this.add.text(rightColX + 70, cy - 134, '⏱ 3.0с', {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+      color: '#86efac'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setVisible(false);
+
+    // Separate Box 3: Skill Description Box
+    this.detailSkillDescBox = this.add.rectangle(rightColX + 5, cy - 78, 205, 68, 0x111827)
+      .setStrokeStyle(2, 0x475569)
+      .setScrollFactor(0).setDepth(502).setVisible(false);
+
+    this.detailSkillDesc = this.add.text(rightColX - 92, cy - 104, 'Описание способности...', {
+      fontSize: '9.5px',
+      fontFamily: 'monospace',
+      color: '#e2e8f0',
+      lineSpacing: 2,
+      wordWrap: { width: 190 }
+    }).setOrigin(0, 0).setScrollFactor(0).setDepth(503).setVisible(false);
+
+    // 4. RIGHT COLUMN: 3 Square Skill Buttons Stacked Vertically
+    this.detailSkillSquareButtons = [];
+    const skillLabels = ['1', '2', '★'];
+    const sqYOffsets = [-16, 32, 80];
+
+    for (let i = 0; i < 3; i++) {
+      const sqY = cy + sqYOffsets[i];
+
+      const sqBg = this.add.rectangle(rightColX + 5, sqY, 205, 38, 0x181c2b)
+        .setStrokeStyle(2, i === 0 ? 0x4ade80 : 0x3f3f46)
+        .setScrollFactor(0).setDepth(502).setInteractive({ useHandCursor: true }).setVisible(false);
+
+      const sqIcon = this.add.image(rightColX - 75, sqY, 'skill_zaza_1')
+        .setScale(1.0).setScrollFactor(0).setDepth(503).setVisible(false);
+
+      const sqLabel = this.add.text(rightColX - 48, sqY, '', {
+        fontSize: '10px',
+        fontFamily: 'monospace',
+        fontStyle: 'bold',
+        color: i === 0 ? '#4ade80' : '#ffffff'
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(503).setVisible(false);
+
+      const onSquareClick = () => {
+        soundEngine.playClick();
+        this.selectDetailSkill(i);
+      };
+      sqBg.on('pointerdown', onSquareClick);
+      sqIcon.on('pointerdown', onSquareClick);
+      sqLabel.on('pointerdown', onSquareClick);
+
+      this.detailSkillSquareButtons.push({ bg: sqBg, icon: sqIcon, label: sqLabel });
+      this.detailGroup.push(sqBg, sqIcon, sqLabel);
+    }
+
+    // 5. BOTTOM-RIGHT: Select Button
+    this.detailSelectBtn = this.add.rectangle(rightColX + 5, cy + 140, 205, 40, 0x16a34a)
+      .setStrokeStyle(2, 0x86efac)
       .setScrollFactor(0).setDepth(502).setInteractive({ useHandCursor: true }).setVisible(false);
 
-    this.detailSelectText = this.add.text(heroLeftX, cy + 140, '[ ВЫБРАТЬ БОЙЦА ]', {
-      fontSize: '16px',
+    this.detailSelectText = this.add.text(rightColX + 5, cy + 140, '[ ВЫБРАТЬ БОЙЦА ]', {
+      fontSize: '12px',
       fontFamily: 'monospace',
       fontStyle: 'bold',
       color: '#ffffff'
@@ -776,82 +994,51 @@ export class HubScene extends Phaser.Scene {
     this.detailSelectBtn.on('pointerdown', onSelectClick);
     this.detailSelectText.on('pointerdown', onSelectClick);
 
-    // Right Column: 3 Skill Buttons in Top-Right Corner + Skill Info Box
-    const skillsRightX = cx + 175;
-    this.detailSkillButtons = [];
-
-    const skillLabels = ['[ 1. НАВЫК ]', '[ 2. НАВЫК ]', '[ ★ УЛЬТА ]'];
-    const btnWidth = 110;
-    const btnSpacing = 116;
-
-    for (let i = 0; i < 3; i++) {
-      const btnX = skillsRightX - 116 + i * btnSpacing;
-      const btnY = cy - 130;
-
-      const sBtnBg = this.add.rectangle(btnX, btnY, btnWidth, 42, 0x1f2937)
-        .setStrokeStyle(2, i === 0 ? 0x4ade80 : 0x475569)
-        .setScrollFactor(0).setDepth(502).setInteractive({ useHandCursor: true }).setVisible(false);
-
-      const sIcon = this.add.image(btnX - 34, btnY, 'skill_zaza_1')
-        .setScale(1.1).setScrollFactor(0).setDepth(503).setVisible(false);
-
-      const sLabel = this.add.text(btnX + 12, btnY, skillLabels[i], {
-        fontSize: '12px',
-        fontFamily: 'monospace',
-        fontStyle: 'bold',
-        color: i === 0 ? '#4ade80' : '#ffffff'
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setVisible(false);
-
-      const onSkillBtnClick = () => {
-        soundEngine.playClick();
-        this.selectDetailSkill(i);
-      };
-
-      sBtnBg.on('pointerdown', onSkillBtnClick);
-
-      this.detailSkillButtons.push({ bg: sBtnBg, icon: sIcon, label: sLabel });
-      this.detailGroup.push(sBtnBg, sIcon, sLabel);
-    }
-
-    // Prominent Single Skill Description Card Below Buttons
-    this.detailCardBox = this.add.rectangle(skillsRightX, cy + 25, 360, 210, 0x1e293b)
-      .setStrokeStyle(3, 0x38bdf8)
-      .setScrollFactor(0).setDepth(502).setVisible(false);
-
-    this.detailSkillTitle = this.add.text(skillsRightX - 160, cy - 55, 'ПЛЕВОК СЛИЗЬЮ', {
-      fontSize: '18px',
-      fontFamily: 'monospace',
-      fontStyle: 'bold',
-      color: '#4ade80'
-    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(503).setVisible(false);
-
-    this.detailSkillMeta = this.add.text(skillsRightX + 160, cy - 55, '[ КД: 3.0с ]', {
-      fontSize: '13px',
-      fontFamily: 'monospace',
-      fontStyle: 'bold',
-      color: '#fbbf24'
-    }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(503).setVisible(false);
-
-    this.detailSkillDesc = this.add.text(skillsRightX - 160, cy - 30, 'Описание способности...', {
-      fontSize: '13px',
-      fontFamily: 'monospace',
-      color: '#e2e8f0',
-      lineSpacing: 5,
-      wordWrap: { width: 320 }
-    }).setOrigin(0, 0).setScrollFactor(0).setDepth(503).setVisible(false);
-
     this.detailGroup.push(
       detailBackBtn,
       detailCloseBtn,
-      this.detailHeroSprite,
       this.detailHeroName,
-      this.detailSelectBtn,
-      this.detailSelectText,
-      this.detailCardBox,
+      this.detailHeroRarityBadgeBg,
+      this.detailHeroRarity,
+      this.detailHeroTitleBoxBg,
+      this.detailHeroTitle,
+      this.detailHeroAttackBoxBg,
+      this.detailHeroAttackDesc,
+      this.detailHeroStatsBoxBg,
+      this.detailHeroStats,
+      this.detailPedestalOuter,
+      this.detailPedestal,
+      this.detailHeroSprite,
+      this.detailSkillNameBoxBg,
       this.detailSkillTitle,
+      this.detailSkillCdBoxBg,
       this.detailSkillMeta,
-      this.detailSkillDesc
+      this.detailSkillDescBox,
+      this.detailSkillDesc,
+      this.detailSelectBtn,
+      this.detailSelectText
     );
+  }
+
+  private selectDetailSkill(idx: number) {
+    this.currentDetailSkillIndex = idx;
+    const hero = HEROES[this.tempHeroKey] || HEROES.char_zaza;
+    const skill = hero.skills[idx];
+    if (!skill) return;
+
+    this.detailSkillTitle.setText(skill.name.toUpperCase());
+    this.detailSkillMeta.setText(`⏱ ${skill.cooldown}с`);
+    this.detailSkillDesc.setText(skill.desc);
+
+    const skillColor = idx === 2 ? 0xfbbf24 : (idx === 1 ? 0x38bdf8 : 0x4ade80);
+    this.detailSkillNameBoxBg.setStrokeStyle(2, skillColor);
+
+    this.detailSkillSquareButtons.forEach((btn, i) => {
+      const isSelected = i === idx;
+      btn.bg.setStrokeStyle(isSelected ? 2 : 1, isSelected ? skillColor : 0x3f3f46);
+      btn.bg.setFillStyle(isSelected ? 0x14532d : 0x181a26);
+      btn.label.setColor(isSelected ? '#86efac' : '#ffffff');
+    });
   }
 
   private openHeroMenu() {
@@ -864,13 +1051,12 @@ export class HubScene extends Phaser.Scene {
     const cx = width / 2;
     const cy = height / 2;
 
-    this.heroOverlay.setPosition(cx, cy).setSize(width * 2, height * 2).setVisible(true);
-    this.altarBg.setPosition(cx, cy).setVisible(true);
+    if (this.heroOverlay && typeof this.heroOverlay.setDisplaySize === 'function') this.heroOverlay.setPosition(cx, cy).setDisplaySize(width * 2, height * 2).setVisible(true);
+    if (this.altarBg) this.altarBg.setPosition(cx, cy).setVisible(true);
     this.repositionAltarElements(width, height);
     this.showRosterView();
 
-    this.minimapCamera.setVisible(false);
-    this.minimapBorder.setVisible(false);
+    if (this.minimapContainer) this.minimapContainer.setVisible(false);
     this.combatElements.forEach(el => (el as unknown as { setVisible: (v: boolean) => void }).setVisible(false));
     if (this.joyStickBase) {
       this.joyStickBase.setVisible(false);
@@ -885,8 +1071,7 @@ export class HubScene extends Phaser.Scene {
     this.rosterGroup.forEach(obj => (obj as unknown as { setVisible: (v: boolean) => void }).setVisible(false));
     this.detailGroup.forEach(obj => (obj as unknown as { setVisible: (v: boolean) => void }).setVisible(false));
 
-    this.minimapCamera.setVisible(true);
-    this.minimapBorder.setVisible(true);
+    if (this.minimapContainer) this.minimapContainer.setVisible(true);
     this.combatElements.forEach(el => (el as unknown as { setVisible: (v: boolean) => void }).setVisible(true));
     if (!this.isPC && this.joyStickBase) {
       this.joyStickBase.setVisible(true);
@@ -899,8 +1084,9 @@ export class HubScene extends Phaser.Scene {
 
     this.rosterCards.forEach(c => {
       const isEquipped = c.key === this.selectedHeroKey;
-      c.statusText.setText(isEquipped ? '[ ТЕКУЩИЙ ✓ ]' : '[ ВЫБРАТЬ ]');
-      c.statusText.setColor(isEquipped ? '#4ade80' : '#38bdf8');
+      c.statusText.setText(isEquipped ? '[ ТЕКУЩИЙ ✓ ]' : '').setVisible(isEquipped);
+      c.statusText.setColor('#4ade80');
+      c.statusText.setBackgroundColor('#064e3b');
     });
 
     this.rosterGroup.forEach(obj => (obj as unknown as { setVisible: (v: boolean) => void }).setVisible(true));
@@ -912,61 +1098,44 @@ export class HubScene extends Phaser.Scene {
 
     this.rosterGroup.forEach(obj => (obj as unknown as { setVisible: (v: boolean) => void }).setVisible(false));
 
-    // Show actual character sprite in large authentic pixel form
+    // Show actual character sprite stationary on center pedestal (NO moving back and forth)
     this.tweens.killTweensOf(this.detailHeroSprite);
-    this.detailHeroSprite.setTexture(hero.texture).setScale(3.2).setAngle(0);
-    this.tweens.add({
-      targets: this.detailHeroSprite,
-      scaleY: 3.4,
-      scaleX: 3.25,
-      duration: 750,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
+    this.detailHeroSprite.setTexture(hero.texture).setScale(3.0).setAngle(0);
 
-    this.detailHeroName.setText(hero.name).setColor('#ffffff');
+    const displayName = heroKey === 'char_zaza' ? 'ZAZA' : (heroKey === 'char_grim' ? 'ГРИМ' : 'БЬОРН');
+    this.detailHeroName.setText(displayName).setColor('#ffffff');
 
-    // Update 3 skill button icons & active state
+    // Rarity badge directly below name
+    this.detailHeroRarityBadgeBg.setStrokeStyle(1, hero.color).setFillStyle(heroKey === 'char_zaza' ? 0x2e1065 : 0x1e293b);
+    this.detailHeroRarity.setText(`[ ${hero.rarity} ]`).setColor(hero.colorHex);
+
+    this.detailHeroTitle.setText(hero.title);
+    this.detailHeroAttackDesc.setText(`⚔ Атака: ${hero.attackDesc}`);
+    this.detailHeroStats.setText(`❤ HP: ${hero.hp}   ⚡ СПД: ${hero.speed}`);
+
+    // Update square skill buttons on right
     hero.skills.forEach((skill, idx) => {
-      const btn = this.detailSkillButtons[idx];
-      btn.icon.setTexture(skill.icon);
+      const sqBtn = this.detailSkillSquareButtons[idx];
+      if (sqBtn) {
+        sqBtn.icon.setTexture(skill.icon);
+        sqBtn.label.setText(skill.name.toUpperCase());
+      }
     });
 
-    // Select skill 0 by default
+    // Select first skill by default to show title & description on top-right
     this.selectDetailSkill(0);
 
-    // Update select button state
+    // Update select button state (in bottom-right corner)
     const isAlreadyEquipped = this.selectedHeroKey === this.tempHeroKey;
     if (isAlreadyEquipped) {
-      this.detailSelectBtn.setFillStyle(0x374151).setStrokeStyle(2, 0x94a3b8);
+      this.detailSelectBtn.setFillStyle(0x27272a).setStrokeStyle(2, 0x52525b);
       this.detailSelectText.setText('[ ТЕКУЩИЙ БОЕЦ ✓ ]').setColor('#94a3b8');
     } else {
-      this.detailSelectBtn.setFillStyle(0x16a34a).setStrokeStyle(3, 0x86efac);
+      this.detailSelectBtn.setFillStyle(0x16a34a).setStrokeStyle(2, 0x86efac);
       this.detailSelectText.setText('[ ВЫБРАТЬ ЭТОГО БОЙЦА ]').setColor('#ffffff');
     }
 
     this.detailGroup.forEach(obj => (obj as unknown as { setVisible: (v: boolean) => void }).setVisible(true));
-  }
-
-  private selectDetailSkill(index: number) {
-    this.currentDetailSkillIndex = index;
-    const hero = HEROES[this.tempHeroKey];
-    if (!hero) return;
-
-    this.detailSkillButtons.forEach((btn, i) => {
-      const isSelected = i === index;
-      btn.bg.setStrokeStyle(2, isSelected ? 0x4ade80 : 0x475569);
-      btn.bg.setFillStyle(isSelected ? 0x1e3a8a : 0x1f2937);
-      btn.label.setColor(isSelected ? '#4ade80' : '#ffffff');
-    });
-
-    const skill = hero.skills[index];
-    if (skill) {
-      this.detailSkillTitle.setText(skill.name.toUpperCase());
-      this.detailSkillMeta.setText(`[ КД: ${skill.cooldown}с ] • ${skill.type}`);
-      this.detailSkillDesc.setText(skill.desc);
-    }
   }
 
   private applySelectedHero() {
@@ -983,6 +1152,11 @@ export class HubScene extends Phaser.Scene {
 
     this.isMonster = false;
     this.player.setScale(1.15);
+
+    let wTex = 'weapon_stick';
+    if (this.selectedHeroKey === 'char_grim') wTex = 'weapon_flask_launcher';
+    else if (this.selectedHeroKey === 'char_bjorn') wTex = 'weapon_battleaxe';
+    if (this.playerWeaponVisual) this.playerWeaponVisual.setTexture(wTex);
 
     this.updateCombatIcons();
     this.closeHeroMenu();
@@ -1004,9 +1178,9 @@ export class HubScene extends Phaser.Scene {
       event.stopPropagation();
     });
 
-    // Window Frame (640 x 440)
-    this.lobbyBg = this.add.rectangle(cx, cy, 640, 440, 0x18181b)
-      .setStrokeStyle(4, 0xef4444)
+    // Window Frame (640 x 440 with gold/amber border)
+    this.lobbyBg = this.add.rectangle(cx, cy, 640, 440, 0x0f111a)
+      .setStrokeStyle(3, 0xd97706)
       .setScrollFactor(0).setDepth(501).setVisible(false);
 
     // Title
@@ -1014,7 +1188,7 @@ export class HubScene extends Phaser.Scene {
       fontSize: '22px',
       fontFamily: 'monospace',
       fontStyle: 'bold',
-      color: '#ffffff'
+      color: '#facc15'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(502).setVisible(false);
 
     // Back Button
@@ -1023,7 +1197,7 @@ export class HubScene extends Phaser.Scene {
       fontFamily: 'monospace',
       fontStyle: 'bold',
       color: '#facc15',
-      backgroundColor: '#3f3f46',
+      backgroundColor: '#1e2230',
       padding: { x: 10, y: 5 }
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(502).setInteractive({ useHandCursor: true }).setVisible(false);
 
@@ -1048,21 +1222,21 @@ export class HubScene extends Phaser.Scene {
     // 1. ROOT VIEW: 2 MAIN BUTTONS [ ПВП ] & [ ПОДЗЕМЕЛЬЕ ]
     // ==========================================
     const rootPvpY = cy - 40;
-    const btnRootPvpBg = this.add.rectangle(cx, rootPvpY, 480, 80, 0x1e293b)
-      .setStrokeStyle(3, 0x38bdf8)
+    const btnRootPvpBg = this.add.rectangle(cx, rootPvpY, 480, 80, 0x181a26)
+      .setStrokeStyle(3, 0xd97706)
       .setScrollFactor(0).setDepth(502).setInteractive({ useHandCursor: true }).setVisible(false);
 
     const btnRootPvpTitle = this.add.text(cx, rootPvpY - 14, '[ ⚔️ ПВП АРЕНА ]', {
       fontSize: '21px',
       fontFamily: 'monospace',
       fontStyle: 'bold',
-      color: '#38bdf8'
+      color: '#facc15'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setInteractive({ useHandCursor: true }).setVisible(false);
 
     const btnRootPvpDesc = this.add.text(cx, rootPvpY + 16, 'Обычные матчи • Рейтинговая лига • Битва за кубки', {
       fontSize: '12px',
       fontFamily: 'monospace',
-      color: '#94a3b8'
+      color: '#cbd5e1'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setInteractive({ useHandCursor: true }).setVisible(false);
 
     const triggerRootPvp = () => {
@@ -1074,12 +1248,12 @@ export class HubScene extends Phaser.Scene {
     btnRootPvpDesc.on('pointerdown', triggerRootPvp);
 
     btnRootPvpBg.on('pointerover', () => {
-      btnRootPvpBg.setStrokeStyle(3, 0x7dd3fc).setFillStyle(0x334155);
-      btnRootPvpTitle.setColor('#7dd3fc');
+      btnRootPvpBg.setStrokeStyle(3, 0xfde047).setFillStyle(0x27273a);
+      btnRootPvpTitle.setColor('#fde047');
     });
     btnRootPvpBg.on('pointerout', () => {
-      btnRootPvpBg.setStrokeStyle(3, 0x38bdf8).setFillStyle(0x1e293b);
-      btnRootPvpTitle.setColor('#38bdf8');
+      btnRootPvpBg.setStrokeStyle(3, 0xd97706).setFillStyle(0x181a26);
+      btnRootPvpTitle.setColor('#facc15');
     });
 
     const rootDungY = cy + 60;
@@ -1123,8 +1297,8 @@ export class HubScene extends Phaser.Scene {
     // 2. PVP MODES: [ ОБЫЧНЫЙ ] & [ РЕЙТИНГОВЫЙ ]
     // ==========================================
     const casualY = cy - 40;
-    const btnCasualBg = this.add.rectangle(cx, casualY, 460, 78, 0x27272a)
-      .setStrokeStyle(3, 0x38bdf8)
+    const btnCasualBg = this.add.rectangle(cx, casualY, 460, 78, 0x181a26)
+      .setStrokeStyle(3, 0xd97706)
       .setScrollFactor(0).setDepth(502).setInteractive({ useHandCursor: true }).setVisible(false);
 
     const btnCasualTitle = this.add.text(cx, casualY - 14, '[ ⚔ ОБЫЧНЫЙ МАТЧ ]', {
@@ -1180,21 +1354,21 @@ export class HubScene extends Phaser.Scene {
     // 3. DUNGEON MODES: [ СОЛО ] & [ ОНЛАЙН ]
     // ==========================================
     const soloY = cy - 40;
-    const btnSoloBg = this.add.rectangle(cx, soloY, 460, 78, 0x1e3a8a)
-      .setStrokeStyle(3, 0x60a5fa)
+    const btnSoloBg = this.add.rectangle(cx, soloY, 460, 78, 0x1e293b)
+      .setStrokeStyle(3, 0xf59e0b)
       .setScrollFactor(0).setDepth(502).setInteractive({ useHandCursor: true }).setVisible(false);
 
     const btnSoloTitle = this.add.text(cx, soloY - 14, '[ 🛡️ СОЛО РЕЖИМ ]', {
       fontSize: '20px',
       fontFamily: 'monospace',
       fontStyle: 'bold',
-      color: '#93c5fd'
+      color: '#fcd34d'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setInteractive({ useHandCursor: true }).setVisible(false);
 
     const btnSoloDesc = this.add.text(cx, soloY + 16, 'Одиночный поход • Случайная генерация • Испытание героя', {
       fontSize: '12px',
       fontFamily: 'monospace',
-      color: '#bfdbfe'
+      color: '#fef08a'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setInteractive({ useHandCursor: true }).setVisible(false);
 
     const triggerSoloDung = () => {
@@ -1238,21 +1412,21 @@ export class HubScene extends Phaser.Scene {
     // 4. DUNGEON ONLINE CHOICE: [ СОЗДАТЬ ] & [ ВОЙТИ ]
     // ==========================================
     const createChoiceY = cy - 40;
-    const btnCreateChoiceBg = this.add.rectangle(cx, createChoiceY, 460, 78, 0x1e293b)
-      .setStrokeStyle(3, 0x38bdf8)
+    const btnCreateChoiceBg = this.add.rectangle(cx, createChoiceY, 460, 78, 0x181a26)
+      .setStrokeStyle(3, 0xf59e0b)
       .setScrollFactor(0).setDepth(502).setInteractive({ useHandCursor: true }).setVisible(false);
 
     const btnCreateChoiceTitle = this.add.text(cx, createChoiceY - 14, '[ ➕ СОЗДАТЬ КОМНАТУ ]', {
       fontSize: '20px',
       fontFamily: 'monospace',
       fontStyle: 'bold',
-      color: '#38bdf8'
+      color: '#facc15'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setInteractive({ useHandCursor: true }).setVisible(false);
 
     const btnCreateChoiceDesc = this.add.text(cx, createChoiceY + 16, 'Задать имя, пароль и создать персональный код для друзей', {
       fontSize: '12px',
       fontFamily: 'monospace',
-      color: '#94a3b8'
+      color: '#cbd5e1'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setInteractive({ useHandCursor: true }).setVisible(false);
 
     const triggerShowCreate = () => {
@@ -1294,8 +1468,8 @@ export class HubScene extends Phaser.Scene {
     // ==========================================
     // 5. DUNGEON CREATE VIEW (NAME, PASS, GEN CODE, START)
     // ==========================================
-    const createBox = this.add.rectangle(cx, cy, 520, 260, 0x18181b)
-      .setStrokeStyle(2, 0x38bdf8)
+    const createBox = this.add.rectangle(cx, cy, 520, 260, 0x181a26)
+      .setStrokeStyle(2, 0xd97706)
       .setScrollFactor(0).setDepth(502).setVisible(false);
 
     this.roomNameDisplay = this.add.text(cx, cy - 90, `ИМЯ КОМНАТЫ: ${this.currentRoomName} ✎`, {
@@ -1403,7 +1577,7 @@ export class HubScene extends Phaser.Scene {
     // 6. DUNGEON SERVERS VIEW: [ ПОДБОР ] [ ПОИСК ] [ ВОЙТИ ПО КОДУ ]
     // ==========================================
     const serverBox = this.add.rectangle(cx, cy - 35, 540, 160, 0x09090b)
-      .setStrokeStyle(2, 0x52525b)
+      .setStrokeStyle(2, 0xd97706)
       .setScrollFactor(0).setDepth(502).setVisible(false);
 
     this.dungeonServerRows = [];
@@ -1420,7 +1594,7 @@ export class HubScene extends Phaser.Scene {
       const sItem = initialServers[i];
 
       const rowBg = this.add.rectangle(cx, sY, 510, 36, 0x1f2937)
-        .setStrokeStyle(1, 0x38bdf8)
+        .setStrokeStyle(1, 0xd97706)
         .setScrollFactor(0).setDepth(502).setVisible(false);
 
       const rowLabel = this.add.text(cx - 240, sY, `[▶] ${sItem.name} • ${sItem.players} • Код: ${sItem.code}`, {
@@ -1721,15 +1895,14 @@ export class HubScene extends Phaser.Scene {
 
     this.repositionLobbyElements(cx, cy);
 
-    this.lobbyOverlay.setPosition(cx, cy).setSize(width * 2, height * 2).setVisible(true);
-    this.lobbyBg.setPosition(cx, cy).setVisible(true);
+    if (this.lobbyOverlay && typeof this.lobbyOverlay.setDisplaySize === 'function') this.lobbyOverlay.setPosition(cx, cy).setDisplaySize(width * 2, height * 2).setVisible(true);
+    if (this.lobbyBg) this.lobbyBg.setPosition(cx, cy).setVisible(true);
     this.lobbyTitle.setPosition(cx, cy - 175).setVisible(true);
     this.lobbyCloseBtn.setPosition(cx + 275, cy - 175).setVisible(true);
 
     this.showPortalRoot();
 
-    this.minimapCamera.setVisible(false);
-    this.minimapBorder.setVisible(false);
+    if (this.minimapContainer) this.minimapContainer.setVisible(false);
     this.combatElements.forEach(el => (el as unknown as { setVisible: (v: boolean) => void }).setVisible(false));
     if (this.joyStickBase) {
       this.joyStickBase.setVisible(false);
@@ -1749,8 +1922,7 @@ export class HubScene extends Phaser.Scene {
     this.lobbyBaseGroup.forEach(obj => (obj as unknown as { setVisible: (v: boolean) => void }).setVisible(false));
     this.hideAllLobbyViews();
 
-    this.minimapCamera.setVisible(true);
-    this.minimapBorder.setVisible(true);
+    if (this.minimapContainer) this.minimapContainer.setVisible(true);
     this.combatElements.forEach(el => (el as unknown as { setVisible: (v: boolean) => void }).setVisible(true));
     if (!this.isPC && this.joyStickBase) {
       this.joyStickBase.setVisible(true);
@@ -2013,6 +2185,7 @@ export class HubScene extends Phaser.Scene {
         } else if (type === 'ult') {
           soundEngine.playMonsterUlt();
           this.isMonster = true;
+          if (this.playerWeaponVisual) this.playerWeaponVisual.setVisible(false);
           this.player.setTexture('char_zaza_monster');
           this.player.setScale(1.25);
           this.playerHp = 2200;
@@ -2044,14 +2217,18 @@ export class HubScene extends Phaser.Scene {
           });
           this.dealDamageInArea(this.player.x + dir * 65, this.player.y, 60, 180);
         } else if (type === 's1') {
-          soundEngine.playWhirlwind();
-          this.tweens.add({
-            targets: this.player,
-            x: this.player.x + dir * 160,
-            duration: 200,
-            ease: 'Power2'
-          });
-          this.dealDamageInArea(this.player.x + dir * 80, this.player.y, 65, 150);
+          soundEngine.playMonsterUlt();
+          // Monster Claw Ground Slam with 3 Toxic Wave Bursts
+          for (let step = 1; step <= 3; step++) {
+            this.time.delayedCall(step * 90, () => {
+              if (!this.player || !this.player.active) return;
+              const slamX = this.player.x + dir * step * 50;
+              const slamY = this.player.y;
+              const wave = this.add.circle(slamX, slamY, 28, 0x84cc16, 0.8).setDepth(100);
+              this.tweens.add({ targets: wave, scale: 2.2, alpha: 0, duration: 320, onComplete: () => wave.destroy() });
+              this.dealDamageInArea(slamX, slamY, 70, 180);
+            });
+          }
         } else if (type === 's2') {
           soundEngine.playMonsterUlt();
           // Monster roar continuous ground shakes
@@ -2418,6 +2595,8 @@ export class HubScene extends Phaser.Scene {
   override update(time: number) {
     if (this.isHeroMenuOpen || this.isLobbyOpen) return;
 
+    this.updateMinimapRadar();
+
     // Monster transformation expiration
     if (this.isMonster && time > this.monsterTimer) {
       this.isMonster = false;
@@ -2427,6 +2606,18 @@ export class HubScene extends Phaser.Scene {
       this.playerMaxHp = HEROES[this.selectedHeroKey].hp;
       this.updateCombatIcons();
       this.showFloatingText(this.player.x, this.player.y - 60, 'ДЕЙСТВИЕ МУТАЦИИ ЗАКОНЧИЛОСЬ', '#94a3b8');
+    }
+
+    if (this.playerWeaponVisual) {
+      const facingRight = !this.player.flipX;
+      this.playerWeaponVisual.setPosition(this.player.x + (facingRight ? 16 : -16), this.player.y + 4);
+      this.playerWeaponVisual.setFlipX(!facingRight);
+    }
+
+    if (this.aimJoyPointerId !== null && this.aimJoyVector.lengthSq() > 0.05) {
+      if (this.cds.attack <= time) {
+        this.executeSkill('attack');
+      }
     }
 
     // Cooldown overlays
@@ -2490,56 +2681,68 @@ export class HubScene extends Phaser.Scene {
     const cx = width / 2;
     const cy = height / 2;
 
-    if (this.heroOverlay) {
-      this.heroOverlay.setSize(width * 2, height * 2).setPosition(cx, cy);
+    if (this.heroOverlay && typeof this.heroOverlay.setDisplaySize === 'function') {
+      this.heroOverlay.setDisplaySize(width * 2, height * 2).setPosition(cx, cy);
     }
     if (this.altarBg) {
       this.altarBg.setPosition(cx, cy);
     }
 
     // Reposition roster elements
-    const cardOffsets = [-225, 0, 225];
+    const cardOffsets = [-195, 0, 195];
     if (this.rosterCards && this.rosterCards.length === 3) {
-      if (this.rosterGroup[0]) (this.rosterGroup[0] as Phaser.GameObjects.Text).setPosition(cx, cy - 185);
-      if (this.rosterGroup[1]) (this.rosterGroup[1] as Phaser.GameObjects.Text).setPosition(cx + 345, cy - 188);
+      if (this.rosterGroup[0]) (this.rosterGroup[0] as Phaser.GameObjects.Text).setPosition(cx, cy - 180);
+      if (this.rosterGroup[1]) (this.rosterGroup[1] as Phaser.GameObjects.Text).setPosition(cx + 305, cy - 180);
 
       this.rosterCards.forEach((c, idx) => {
         const cX = cx + cardOffsets[idx];
-        const cY = cy + 22;
+        const cY = cy + 18;
         if (c.bg) c.bg.setPosition(cX, cY);
-        if (c.portrait) c.portrait.setPosition(cX, cY - 45);
-        if (c.statusText) c.statusText.setPosition(cX, cY + 95);
+        if (c.banner) c.banner.setPosition(cX, cY - 102);
+        if (c.rarityText) c.rarityText.setPosition(cX, cY - 102);
+        if (c.portrait) c.portrait.setPosition(cX, cY - 42);
+        if (c.nameText) c.nameText.setPosition(cX, cY + 28);
+        if (c.statsText) c.statsText.setPosition(cX, cY + 50);
+        if (c.statusText) c.statusText.setPosition(cX, cY + 84);
       });
     }
 
-    // Reposition detail elements (Hero showcase on left, 3 skills and info box on right)
+    // Reposition detail elements (Hero Name top-left, Sprite & Pedestal center, 3 Separate Skill boxes, Skill selector buttons, Select button)
     if (this.detailGroup && this.detailGroup.length > 0) {
-      const backBtn = this.detailGroup[0] as Phaser.GameObjects.Text;
-      const closeBtn = this.detailGroup[1] as Phaser.GameObjects.Text;
+      const leftX = cx - 215;
+      if (this.detailHeroName) this.detailHeroName.setPosition(leftX, cy - 135);
+      if (this.detailHeroRarityBadgeBg) this.detailHeroRarityBadgeBg.setPosition(leftX, cy - 106);
+      if (this.detailHeroRarity) this.detailHeroRarity.setPosition(leftX, cy - 106);
+      if (this.detailHeroTitleBoxBg) this.detailHeroTitleBoxBg.setPosition(leftX, cy - 76);
+      if (this.detailHeroTitle) this.detailHeroTitle.setPosition(leftX, cy - 76);
+      if (this.detailHeroAttackBoxBg) this.detailHeroAttackBoxBg.setPosition(leftX, cy - 30);
+      if (this.detailHeroAttackDesc) this.detailHeroAttackDesc.setPosition(leftX - 74, cy - 44);
+      if (this.detailHeroStatsBoxBg) this.detailHeroStatsBoxBg.setPosition(leftX, cy + 22);
+      if (this.detailHeroStats) this.detailHeroStats.setPosition(leftX, cy + 22);
 
-      if (backBtn) backBtn.setPosition(cx - 240, cy - 195);
-      if (closeBtn) closeBtn.setPosition(cx + 345, cy - 195);
+      const heroCenterX = cx - 10;
+      if (this.detailPedestalOuter) this.detailPedestalOuter.setPosition(heroCenterX, cy + 62);
+      if (this.detailPedestal) this.detailPedestal.setPosition(heroCenterX, cy + 62);
+      if (this.detailHeroSprite) this.detailHeroSprite.setPosition(heroCenterX, cy - 12);
 
-      const heroLeftX = cx - 180;
-      if (this.detailHeroSprite) this.detailHeroSprite.setPosition(heroLeftX, cy - 35);
-      if (this.detailHeroName) this.detailHeroName.setPosition(heroLeftX, cy + 80);
-      if (this.detailSelectBtn) this.detailSelectBtn.setPosition(heroLeftX, cy + 140);
-      if (this.detailSelectText) this.detailSelectText.setPosition(heroLeftX, cy + 140);
+      const rightColX = cx + 205;
+      if (this.detailSkillNameBoxBg) this.detailSkillNameBoxBg.setPosition(rightColX - 32, cy - 134);
+      if (this.detailSkillTitle) this.detailSkillTitle.setPosition(rightColX - 32, cy - 134);
+      if (this.detailSkillCdBoxBg) this.detailSkillCdBoxBg.setPosition(rightColX + 70, cy - 134);
+      if (this.detailSkillMeta) this.detailSkillMeta.setPosition(rightColX + 70, cy - 134);
+      if (this.detailSkillDescBox) this.detailSkillDescBox.setPosition(rightColX + 5, cy - 78);
+      if (this.detailSkillDesc) this.detailSkillDesc.setPosition(rightColX - 92, cy - 104);
 
-      const skillsRightX = cx + 175;
-      const btnSpacing = 116;
-      this.detailSkillButtons.forEach((btn, i) => {
-        const btnX = skillsRightX - 116 + i * btnSpacing;
-        const btnY = cy - 130;
-        if (btn.bg) btn.bg.setPosition(btnX, btnY);
-        if (btn.icon) btn.icon.setPosition(btnX - 34, btnY);
-        if (btn.label) btn.label.setPosition(btnX + 12, btnY);
+      const sqYOffsets = [-16, 32, 80];
+      this.detailSkillSquareButtons.forEach((sqBtn, i) => {
+        const sqY = cy + sqYOffsets[i];
+        if (sqBtn.bg) sqBtn.bg.setPosition(rightColX + 5, sqY);
+        if (sqBtn.icon) sqBtn.icon.setPosition(rightColX - 75, sqY);
+        if (sqBtn.label) sqBtn.label.setPosition(rightColX - 48, sqY);
       });
 
-      if (this.detailCardBox) this.detailCardBox.setPosition(skillsRightX, cy + 25);
-      if (this.detailSkillTitle) this.detailSkillTitle.setPosition(skillsRightX - 160, cy - 55);
-      if (this.detailSkillMeta) this.detailSkillMeta.setPosition(skillsRightX + 160, cy - 55);
-      if (this.detailSkillDesc) this.detailSkillDesc.setPosition(skillsRightX - 160, cy - 30);
+      if (this.detailSelectBtn) this.detailSelectBtn.setPosition(rightColX + 5, cy + 140);
+      if (this.detailSelectText) this.detailSelectText.setPosition(rightColX + 5, cy + 140);
     }
   }
 
@@ -2654,23 +2857,16 @@ export class HubScene extends Phaser.Scene {
     this.repositionAltarElements(width, height);
     this.repositionLobbyElements(width / 2, height / 2);
 
-    this.interactPromptUI.setPosition(width / 2, height - 35);
+    if (this.interactPromptUI) {
+      this.interactPromptUI.setPosition(width / 2, height - 35);
+    }
 
     // Reposition and scale controls & combat buttons cleanly
     this.positionCombatUI(width, height);
 
-    // Minimap
-    const miniRadius = Math.min(52, Math.max(36, Math.round(Math.min(width, height) * 0.1)));
-    const miniX = width - miniRadius - 16;
-    const miniY = miniRadius + 16;
-    if (this.minimapCamera) {
-      this.minimapCamera.setPosition(miniX - miniRadius, miniY - miniRadius);
-      this.minimapCamera.setSize(miniRadius * 2, miniRadius * 2);
-    }
-    if (this.minimapBorder) {
-      this.minimapBorder.clear();
-      this.minimapBorder.lineStyle(3, 0x4ade80);
-      this.minimapBorder.strokeCircle(miniX, miniY, miniRadius);
+    // Minimap position
+    if (this.minimapContainer) {
+      this.minimapContainer.setPosition(width - 80, 80);
     }
   }
 }

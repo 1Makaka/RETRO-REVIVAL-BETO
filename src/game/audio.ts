@@ -7,12 +7,13 @@ class SoundEngine {
   private ctx: AudioContext | null = null;
   private musicGain: GainNode | null = null;
   private sfxGain: GainNode | null = null;
-  private currentTrack: 'Wiklund' | 'Neowave' | null = null;
+  private currentTrack: 'Wiklund' | 'Neowave' | 'VoidOverlord' | 'ShadowRealm' | null = null;
   private isMusicPlaying = false;
   private musicTimer: number | null = null;
   private musicEnabled = true;
   private sfxEnabled = true;
   private step = 0;
+  private loopCount = 0;
 
   constructor() {
     // Check saved preferences
@@ -22,7 +23,7 @@ class SoundEngine {
 
     if (savedMVol !== null) this.musicEnabled = savedMVol === 'true';
     if (savedSVol !== null) this.sfxEnabled = savedSVol === 'true';
-    if (savedTrack === 'Neowave' || savedTrack === 'Wiklund') {
+    if (savedTrack === 'Neowave' || savedTrack === 'Wiklund' || savedTrack === 'VoidOverlord' || savedTrack === 'ShadowRealm') {
       this.currentTrack = savedTrack;
     } else {
       this.currentTrack = 'Wiklund';
@@ -46,7 +47,7 @@ class SoundEngine {
     }
   }
 
-  public getSelectedTrack(): 'Wiklund' | 'Neowave' {
+  public getSelectedTrack(): 'Wiklund' | 'Neowave' | 'VoidOverlord' | 'ShadowRealm' {
     return this.currentTrack || 'Wiklund';
   }
 
@@ -95,7 +96,7 @@ class SoundEngine {
     else this.startMusic();
   }
 
-  public selectTrack(track: 'Wiklund' | 'Neowave') {
+  public selectTrack(track: 'Wiklund' | 'Neowave' | 'VoidOverlord' | 'ShadowRealm') {
     this.currentTrack = track;
     localStorage.setItem('fb_selected_track', track);
     if (this.isMusicPlaying) {
@@ -126,20 +127,68 @@ class SoundEngine {
   private scheduleNextChiptuneNotes() {
     if (!this.isMusicPlaying || !this.ctx || !this.musicGain) return;
     const now = this.ctx.currentTime;
-    const tempo = this.currentTrack === 'Wiklund' ? 140 : 124;
+    const tempo = this.currentTrack === 'Wiklund' ? 140 : (this.currentTrack === 'VoidOverlord' ? 156 : (this.currentTrack === 'ShadowRealm' ? 132 : 124));
     const beatDuration = 60 / tempo;
     const stepDuration = beatDuration / 2; // 16th or 8th notes
 
     if (this.currentTrack === 'Wiklund') {
       this.playWiklundStep(now, this.step);
+    } else if (this.currentTrack === 'VoidOverlord') {
+      this.playVoidOverlordStep(now, this.step);
+    } else if (this.currentTrack === 'ShadowRealm') {
+      this.playShadowRealmStep(now, this.step);
     } else {
       this.playNeowaveStep(now, this.step);
     }
 
     this.step = (this.step + 1) % 64;
+    if (this.step === 0) {
+      this.loopCount++;
+      // Switch randomly every 12 to 24 loops (approx 1.5 to 3 minutes)
+      if (this.loopCount >= 18) {
+        this.loopCount = 0;
+        const tracks: Array<'Wiklund' | 'Neowave' | 'VoidOverlord' | 'ShadowRealm'> = ['Wiklund', 'Neowave', 'VoidOverlord', 'ShadowRealm'];
+        const otherTracks = tracks.filter(t => t !== this.currentTrack);
+        this.currentTrack = otherTracks[Math.floor(Math.random() * otherTracks.length)] || 'Wiklund';
+        localStorage.setItem('fb_selected_track', this.currentTrack);
+      }
+    }
     this.musicTimer = window.setTimeout(() => {
       this.scheduleNextChiptuneNotes();
     }, stepDuration * 1000);
+  }
+
+  // Track 3: "VoidOverlord" - High-Octane Fast Action Battle Techno / Boss Music
+  private playVoidOverlordStep(now: number, step: number) {
+    if (!this.ctx || !this.musicGain) return;
+
+    // Fast Action D minor / F major scale
+    const actionScale = [293.66, 349.23, 440.0, 523.25, 587.33, 698.46, 880.0]; // D4, F4, A4, C5, D5, F5, A5
+    const actionPattern = [
+      0, 2, 4, 3, 2, 4, 6, 5,
+      4, 2, 0, 2, 3, 4, 5, 6,
+      6, 5, 4, 3, 2, 1, 0, 2,
+      4, 6, 5, 4, 3, 2, 1, 0
+    ];
+
+    const noteIdx = actionPattern[step % 32];
+    const freq = actionScale[noteIdx];
+    this.playSynthNote(freq, 'sawtooth', 0.08, now, 0.22, this.musicGain);
+
+    // Fast Driving Sub-Bass line
+    const bassFreqs = [73.42, 73.42, 87.31, 110.0]; // D2, D2, F2, A2
+    const bassIdx = Math.floor((step % 32) / 8);
+    if (step % 2 === 0) {
+      this.playSynthNote(bassFreqs[bassIdx], 'square', 0.12, now, 0.35, this.musicGain);
+    }
+
+    // Heavy Action Beats (Double Kick & Heavy Snare)
+    if (step % 4 === 0 || step % 8 === 2) {
+      this.playSynthNote(90, 'sine', 0.08, now, 0.4, this.musicGain); // Heavy Kick
+    }
+    if (step % 8 === 4) {
+      this.playNoiseHit(now, 0.12, 0.25, this.musicGain); // Explosive Snare
+    }
   }
 
   // Track 1: "Wiklund" - Upbeat Adventure RPG Chiptune
@@ -285,6 +334,30 @@ class SoundEngine {
     this.playNoiseHit(now, 0.06, 0.2, this.sfxGain);
   }
 
+  public playSlash() {
+    this.playAttack();
+  }
+
+  public playHit() {
+    this.initCtx();
+    if (!this.sfxEnabled || !this.ctx || !this.sfxGain) return;
+    const now = this.ctx.currentTime;
+    this.playNoiseHit(now, 0.1, 0.35, this.sfxGain);
+    this.playSynthNote(120, 'triangle', 0.08, now, 0.3, this.sfxGain);
+  }
+
+  public playShoot() {
+    this.initCtx();
+    if (!this.sfxEnabled || !this.ctx || !this.sfxGain) return;
+    const now = this.ctx.currentTime;
+    this.playSynthNote(880, 'square', 0.06, now, 0.25, this.sfxGain);
+    this.playNoiseHit(now, 0.05, 0.15, this.sfxGain);
+  }
+
+  public playCast() {
+    this.playPoison();
+  }
+
   public playPoison() {
     this.initCtx();
     if (!this.sfxEnabled || !this.ctx || !this.sfxGain) return;
@@ -352,6 +425,27 @@ class SoundEngine {
     if (!this.sfxEnabled || !this.ctx || !this.sfxGain) return;
     const now = this.ctx.currentTime;
     this.playNoiseHit(now, 0.18, 0.25, this.sfxGain);
+  }
+
+  // Track 4: "ShadowRealm" - Atmospheric Dark Fantasy Dungeon Track
+  private playShadowRealmStep(now: number, step: number) {
+    if (!this.ctx || !this.musicGain) return;
+
+    // A Minor / C Major Melodic Pattern
+    const shadowScale = [220.0, 261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33]; // A3 to D5
+    const shadowMelody = [0, 2, 3, 5, 4, 3, 2, 1, 0, 3, 5, 7, 6, 5, 3, 2];
+
+    if (step % 2 === 0) {
+      const idx = shadowMelody[Math.floor((step % 32) / 2)];
+      this.playSynthNote(shadowScale[idx], 'triangle', 0.18, now, 0.2, this.musicGain);
+    }
+
+    // Heavy Dark Dungeon Bass (A1 / F1 / G1)
+    if (step % 8 === 0) {
+      const bassNotes = [55.0, 43.65, 49.0, 55.0]; // A1, F1, G1, A1
+      const bIdx = Math.floor((step % 32) / 8);
+      this.playSynthNote(bassNotes[bIdx], 'sine', 0.45, now, 0.3, this.musicGain);
+    }
   }
 }
 
